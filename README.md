@@ -406,7 +406,16 @@ The current project is intentionally a single-file application:
 project/
 ├── index.html    # HTML structure, styles, application state, UI rendering, and behavior
 ├── README.md     # Project overview and developer/user documentation
-└── AGENTS.md     # Instructions for AI coding agents and maintainers
+├── AGENTS.md     # Instructions for AI coding agents and maintainers
+└── tests/        # Zero-dependency Node test suite for the app's pure logic
+    ├── helpers/
+    │   └── load-app.js   # Extracts the inline script and exposes internal helpers
+    ├── dates.test.js     # Date math, boundaries, and percentage rounding
+    ├── schedule.test.js  # Scheduled days, eligibility, partial completion
+    ├── streaks.test.js   # Current and best streak calculations
+    ├── insights.test.js  # Completion, recovery, and summary statistics
+    ├── normalize.test.js # Backup/localStorage validation and sanitization
+    └── escaping.test.js  # HTML escaping of user-controlled strings
 ```
 
 The application file was previously named `Evrida.html`; the rename to `index.html` does not affect stored data, backups, or the `streakgrid` localStorage key.
@@ -441,19 +450,29 @@ If tests or additional documentation are introduced, keep this tree updated. The
 
 A useful manual development cycle is:
 
-1. Open the app in a modern browser.
-2. Check the console for errors.
-3. Test the changed feature in both light and dark themes.
-4. Test at desktop and mobile viewport widths.
-5. Export data before testing import or destructive flows.
-6. Verify saved data after refresh.
-7. Verify existing backup files remain importable.
+1. Run the automated test suite: `node --test`.
+2. Open the app in a modern browser.
+3. Check the console for errors.
+4. Test the changed feature in both light and dark themes.
+5. Test at desktop and mobile viewport widths.
+6. Export data before testing import or destructive flows.
+7. Verify saved data after refresh.
+8. Verify existing backup files remain importable.
 
 ---
 
 ## Testing and quality checks
 
-There is no dedicated automated test runner in the current project. Until one is added, use a combination of static checks and manual regression tests.
+The application's pure logic has an automated test suite that runs in Node.js with no additional dependencies. Interactive UI behavior still requires manual testing. Use a combination of the automated suite, static checks, and manual regression tests.
+
+### Automated tests
+
+- **Location:** `tests/`
+- **Runner:** Node's built-in `node:test` module (Node.js 20 or newer; developed against Node 24). There are no npm packages, no `package.json`, and no build step.
+- **Command:** run `node --test` from the project directory.
+- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; and `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input.
+- **How it works:** `tests/helpers/load-app.js` reads `index.html`, extracts the inline script, and appends a test-only export hook to the extracted text before evaluating it with minimal DOM stubs. The application file itself is not modified for testability.
+- **Scope:** pure logic only. Rendering, dialogs, undo toasts, file import/export flows, themes, and cross-tab synchronization are not covered and remain manual checks.
 
 ### Static checks
 
@@ -599,7 +618,7 @@ Even though the app is local-only, browser-side security still matters.
 - Data in `localStorage` is not encrypted by the app.
 - Clearing browser data can permanently remove unexported history.
 - JSON import replaces current state rather than merging records.
-- There is no established automated unit, integration, or end-to-end test suite in the current single-file project.
+- Automated tests cover the app's pure logic (dates, schedules, streaks, statistics, escaping, and backup normalization), but interactive UI flows still rely on manual testing; there is no end-to-end suite.
 - Browser support has not been formalized into a minimum-version matrix.
 - Notifications, scheduled reminders, and native mobile packaging are not part of the current implementation.
 
@@ -609,7 +628,6 @@ Even though the app is local-only, browser-side security still matters.
 
 These are possibilities, not promises or implemented features:
 
-- Add a repeatable automated test harness for date, streak, schedule, import, and normalization logic.
 - Add a documented schema-migration strategy for future versions.
 - Add optional installability/PWA support, with a careful offline and storage policy.
 - Add an optional encrypted backup format, with clear key-loss warnings.
@@ -643,6 +661,7 @@ For bug reports, include browser/version, steps to reproduce, expected behavior,
 - [ ] Confirm the correct `index.html` is being released.
 - [ ] Review the diff for accidental data-model or storage-key changes.
 - [ ] Run static HTML and JavaScript syntax checks.
+- [ ] Run the automated test suite (`node --test`).
 - [ ] Complete the relevant manual regression checklist.
 - [ ] Test light, dark, and system themes.
 - [ ] Test mobile and desktop layouts.

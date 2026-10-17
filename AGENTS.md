@@ -11,7 +11,7 @@ This file provides instructions for AI coding agents and maintainers working on 
 - Product: a free, local-first habit tracker and personal-growth app.
 - Product principle: support progress without guilt. Do not introduce shame-based streak messaging, punitive scoring, or copy that treats missed days as personal failure.
 
-The current application is intentionally a self-contained HTML file. HTML, CSS, and JavaScript live together in `index.html`. Do not assume a framework, package manager, bundler, backend, API, or test suite exists.
+The current application is intentionally a self-contained HTML file. HTML, CSS, and JavaScript live together in `index.html`. Do not assume a framework, package manager, bundler, backend, or API exists. The only tooling is a zero-dependency Node test suite in `tests/` (see section 12), which does not affect how the app is shipped.
 
 ## 2. Mandatory workflow
 
@@ -26,7 +26,7 @@ Before editing:
 After editing:
 
 1. Review the diff and search for unintended brand remnants, broken IDs, duplicate IDs, stale documentation, and accidental external dependencies.
-2. Run available static checks. If a browser test cannot be run, state that explicitly; do not claim it passed.
+2. Run the automated test suite (`node --test` from the project root; requires Node.js 20+). Run applicable static checks too. If a browser test cannot be run, state that explicitly; do not claim it passed.
 3. Update `README.md` when user-visible behavior, features, data storage, backup semantics, limitations, or developer workflow changes.
 4. Summarize what changed, which checks actually ran, and any remaining risks.
 
@@ -210,10 +210,18 @@ Daily intentions are separate from habits. Journal entries are optional and must
 
 ## 12. Testing expectations
 
-There is no confirmed automated test framework in the current project. Do not invent or assume one exists.
+The project has a zero-dependency automated test suite in `tests/`, using Node's built-in `node:test` runner (Node.js 20+). Run it with `node --test` from the project root. It covers the app's pure logic: date math and boundaries, scheduled-day and start-date eligibility, partial completion, streaks, insight and recovery statistics, HTML escaping, and `normalize()` as the untrusted-input boundary for `localStorage` and imported backups.
+
+Rules for the test suite:
+
+- Do not add npm packages, a `package.json`, or a build step for testing. Node's built-in modules only.
+- Do not modify `index.html` to enable testing; the loader in `tests/helpers/load-app.js` extracts the inline script at runtime.
+- When changing streak, completion-rate, history, gallery, or date behavior, extend the relevant test file.
+- The suite covers pure logic only; it does not prove interactive browser behavior.
 
 Run applicable checks that are available:
 
+- Automated test suite: `node --test`.
 - HTML parsing/structure check.
 - Inline JavaScript syntax check (extract script contents to a temporary file if needed).
 - Duplicate-ID scan.
