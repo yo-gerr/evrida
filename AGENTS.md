@@ -135,33 +135,48 @@ Use the Evrida brand and tone:
 - Brand: Evrida
 - Tagline: “Every day, a little more you.”
 - Tone: calm, encouraging, respectful, non-judgmental.
-- Visual direction: rounded cards, restrained shadows, coordinated habit colors, clear hierarchy, and responsive layout.
+- Visual direction: editorial wellness journal — warm ivory surfaces, forest-green accents, rounded cards, restrained shadows, coordinated habit colors, clear hierarchy, and responsive layout.
+- Typography: system UI font stack for interface and numeric text; serif (`Georgia`, `'Times New Roman'`, serif) only for editorial content such as page titles, the daily quote, journal prompts, and panel notes. No web fonts.
 
 Current CSS tokens:
 
 ### Light
-- background `#F7F7FC`
+- background `#F7F5EF`
 - card `#FFFFFF`
-- soft surface `#EEF0FA`
-- text `#171A2A`
-- muted text `#596174`
-- border `#DDE1EF`
-- accent `#182B62`
+- soft surface `#EAEDE5`
+- text `#25352B`
+- muted text `#59665B`
+- border `#DCDDD3`
+- accent `#496B50`
 - accent text `#FFFFFF`
-- positive status `#26734D`
+- positive status `#356747`
+- sage surface `#C7D7C1`
+- terracotta `#C8795A`
+- gold `#D8B66A`
+- slate `#788A9A`
+- danger `#A4443A`
+- progress track `#C7D7C1`
 
 ### Dark
-- background `#0D1224`
-- card `#151D35`
-- soft surface `#202B4A`
-- text `#EEF1FF`
-- muted text `#AAB5D6`
-- border `#303E65`
-- accent `#A7B8FF`
-- accent text `#10162A`
-- positive status `#68D39B`
+- background `#171D19`
+- card `#232C25`
+- soft surface `#2B362D`
+- text `#F0EEE5`
+- muted text `#B8C2B5`
+- border `#39463B`
+- accent `#A9C49F`
+- accent text `#171D19`
+- positive status `#A9C49F`
+- sage surface `#3A4A3D`
+- terracotta `#DE9B7E`
+- gold `#E0C283`
+- slate `#9DB0BF`
+- danger `#E89484`
+- progress track `#2F3B31`
 
-The focus indicator currently uses `#718BFF`. The source CSS in `index.html` is the implementation source of truth; update this file and README together if the tokens change.
+The focus indicator uses `#496B50` in light and `#C1D5B8` in dark. The source CSS in `index.html` is the implementation source of truth; update this file and README together if the tokens change.
+
+Habit colors come from a fixed nature palette (`COLORS` in `index.html`): `#496B50`, `#C8795A`, `#788A9A`, `#A67C29`, `#5F8A6E`, `#3F6D7A`, `#B4707C`, `#6E7F4E`. Per-habit text and fill colors are derived with CSS `color-mix()`, so the app requires a browser from the 2023 generation or newer; there is no JavaScript color fallback. Because `normalize()` validates `color` against the palette, changing the palette reassigns non-matching stored colors by habit position — presentation only, with no history loss.
 
 - Preserve system/light/dark theme behavior.
 - Check new colors for sufficient contrast in both themes.

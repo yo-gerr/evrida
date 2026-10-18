@@ -105,12 +105,16 @@ Deleting a habit removes that habit and its associated completion history from t
 
 ### 3. History and heatmaps
 
-The History area presents habit history and allows users to inspect prior dates. Progress is represented in a calendar-style grid:
+The History area presents habit history and allows users to inspect prior dates. Progress is represented in a calendar-style grid of day cells:
 
-- Full intensity indicates the daily target was reached.
-- Partial intensity indicates progress was recorded but the target was not reached.
-- Unscheduled days and days before the habit's start date are treated differently from scheduled days.
-- Future dates cannot be logged.
+- A filled cell indicates the daily target was reached.
+- A lighter filled cell indicates progress was recorded but the target was not reached.
+- A hollow, outlined cell indicates a scheduled day with no completion recorded.
+- A neutral muted cell indicates a rest or unscheduled day.
+- A blank placeholder indicates a day before the habit's start date.
+- A faded cell indicates a future date; future dates cannot be logged.
+
+Every cell carries an accessible date label, and each grid is accompanied by a legend that lists all of the states above, so completion state is never communicated by color alone.
 
 Avoid presenting rest days or unscheduled days as failures.
 
@@ -136,7 +140,9 @@ Journal content is personal information. The interface must continue to explain 
 
 ### 6. Gallery
 
-Gallery creates a 13-week (91-day) visual mosaic for each habit. It distinguishes completed, partial, unscheduled, pre-start, and future dates. The mosaic is generated from habit history; it is not a separate source of completion truth.
+Gallery creates a 13-week (91-day) visual mosaic for each habit: one small square per day. It distinguishes completed, partial, scheduled-with-no-completion, unscheduled/rest, pre-start, and future dates, with the same legend used by History. The mosaic is generated from habit history; it is not a separate source of completion truth.
+
+Mosaic squares scale with their card. On narrow screens the gallery cards stack into a single column so the mosaic stays legible rather than squeezing thirteen columns into a small card.
 
 ### 7. Appearance
 
@@ -146,7 +152,7 @@ The appearance setting supports:
 - **Light**
 - **Dark**
 
-Theme styles are implemented with CSS custom properties and the document's `data-theme` attribute. Keep both explicit themes and system preference behavior working when updating the UI.
+Theme styles are implemented with CSS custom properties and the document's `data-theme` attribute. Keep both explicit themes and system preference behavior working when updating the UI. Selecting System resolves the actual preference at load time and updates the browser `theme-color` meta accordingly; the light theme uses a warm ivory background and the dark theme a green-tinted charcoal.
 
 ### 8. Backup and restore
 
@@ -205,7 +211,7 @@ Do not rename the storage key merely because the product has been rebranded. Doi
 
 ### Browser compatibility
 
-Use a modern browser with support for the APIs and CSS used by the application, including `localStorage`, `Blob`, `URL.createObjectURL`, `<dialog>`, CSS custom properties, and modern JavaScript syntax. Exact minimum browser versions have not been established as part of the current project.
+Use a modern browser with support for the APIs and CSS used by the application, including `localStorage`, `Blob`, `URL.createObjectURL`, `<dialog>`, CSS custom properties, CSS `color-mix()`, and modern JavaScript syntax. `color-mix()` is used for habit tints, note surfaces, and progress fills; it is available in Chromium 111+, Safari 16.2+, and Firefox 113+ (all released in 2023), and there is no JavaScript color fallback. Exact minimum browser versions have not otherwise been established as part of the current project.
 
 ---
 
@@ -378,7 +384,7 @@ Exports additionally include `app` and `exportedAt` metadata.
 | `start` | Start date (`YYYY-MM-DD`) |
 | `days` | Scheduled weekdays, represented as integers `0`–`6` (Sunday–Saturday) |
 | `icon` | Emoji selected for the habit |
-| `color` | Selected color from the app palette |
+| `color` | Selected color from the app palette; values outside the palette are reassigned by habit position during normalization |
 | `done` | Object mapping dates to recorded counts |
 | `art` | Optional legacy/additional object retained when present by normalization |
 
@@ -501,7 +507,8 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Daily progress supports partial counts and target completion.
 - [ ] Future dates and pre-start dates cannot be logged.
 - [ ] Scheduled weekdays are respected by history, streaks, and completion rates.
-- [ ] History and gallery show full, partial, unscheduled, pre-start, and future dates appropriately.
+- [ ] History and gallery show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
+- [ ] Gallery mosaics stay legible, do not overflow their cards, and stack to one column on narrow screens.
 - [ ] Insight period and category filters work.
 - [ ] Journal entries save, reload, search, reopen, and clear correctly.
 - [ ] Mood selection persists.
@@ -517,16 +524,19 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Data survives refresh in the same browser origin.
 - [ ] Existing `streakgrid` local data and earlier valid backups remain usable.
 - [ ] Layout and keyboard focus remain usable on small screens.
+- [ ] No horizontal scrolling appears at phone, tablet, or desktop widths.
+- [ ] Editorial serif titles and quotes and UI-font controls render as intended in both themes.
+- [ ] Completed state stays distinguishable without relying on color alone.
 
 ### Browser testing note
 
-A successful syntax or HTML parse check is not equivalent to a successful interactive browser test. Record which browsers and flows were actually tested when preparing a release.
+A successful syntax or HTML parse check is not equivalent to a successful interactive browser test. Record which browsers and flows were actually tested when preparing a release. Where a Chromium-based browser is available, layout and computed-style properties (horizontal overflow, touch-target size, resolved theme tokens, and page structure) can be checked automatically with a headless run, but visual styling still needs a human reviewer.
 
 ---
 
 ## Accessibility and responsive design
 
-The current implementation includes semantic page regions, labels for form fields, focus-visible styling, accessible names for several icon-only controls, live-region toast feedback, native dialogs, and both top and mobile navigation.
+The current implementation includes semantic page regions, labels for form fields, focus-visible styling, accessible names for several icon-only controls, live-region toast feedback, native dialogs, and both top and mobile navigation. Heatmap and mosaic day cells carry accessible date labels, state is never communicated by color alone, and controls meet a 44px touch target where they are primary (smaller swatches remain at or above the 24px WCAG 2.5.8 minimum). Motion is limited and respects `prefers-reduced-motion`.
 
 When changing the UI:
 
@@ -549,38 +559,65 @@ When changing the UI:
 
 - **Name:** Evrida
 - **Tagline:** Every day, a little more you.
-- **Visual direction:** calm, supportive, clean, and personal; progress should feel encouraging rather than competitive.
-- **Brand mark:** stylized lowercase `e` with a periwinkle accent dot.
+- **Visual direction:** calm, supportive, clean, and personal; progress should feel encouraging rather than competitive. The interface follows an editorial wellness-journal direction: warm ivory surfaces, forest-green accents, rounded cards, restrained shadows, clear hierarchy, and serif type reserved for editorial content.
+- **Brand mark:** forest-green rounded square with a white `E` and a gold accent dot.
 
 ### Light theme tokens
 
 | Token | Value |
 |---|---|
-| Background | `#F7F7FC` |
-| Surface/card | `#FFFFFF` |
-| Soft surface | `#EEF0FA` |
-| Primary text | `#171A2A` |
-| Muted text | `#596174` |
-| Border | `#DDE1EF` |
-| Accent | `#182B62` |
-| Accent text | `#FFFFFF` |
-| Positive status | `#26734D` |
+| Background (`--bg`) | `#F7F5EF` |
+| Surface/card (`--card`) | `#FFFFFF` |
+| Soft surface (`--soft`) | `#EAEDE5` |
+| Primary text (`--ink`) | `#25352B` |
+| Muted text (`--muted`) | `#59665B` |
+| Border (`--line`) | `#DCDDD3` |
+| Accent (`--accent`) | `#496B50` |
+| Accent text (`--accentInk`) | `#FFFFFF` |
+| Positive status (`--good`) | `#356747` |
+| Sage surface (`--sage`) | `#C7D7C1` |
+| Terracotta (`--terracotta`) | `#C8795A` |
+| Gold (`--gold`) | `#D8B66A` |
+| Slate (`--slate`) | `#788A9A` |
+| Danger (`--danger`) | `#A4443A` |
+| Focus ring (`--focus`) | `#496B50` |
+| Progress track (`--progress-track`) | `#C7D7C1` |
 
 ### Dark theme tokens
 
 | Token | Value |
 |---|---|
-| Background | `#0D1224` |
-| Surface/card | `#151D35` |
-| Soft surface | `#202B4A` |
-| Primary text | `#EEF1FF` |
-| Muted text | `#AAB5D6` |
-| Border | `#303E65` |
-| Accent | `#A7B8FF` |
-| Accent text | `#10162A` |
-| Positive status | `#68D39B` |
+| Background (`--bg`) | `#171D19` |
+| Surface/card (`--card`) | `#232C25` |
+| Soft surface (`--soft`) | `#2B362D` |
+| Primary text (`--ink`) | `#F0EEE5` |
+| Muted text (`--muted`) | `#B8C2B5` |
+| Border (`--line`) | `#39463B` |
+| Accent (`--accent`) | `#A9C49F` |
+| Accent text (`--accentInk`) | `#171D19` |
+| Positive status (`--good`) | `#A9C49F` |
+| Sage surface (`--sage`) | `#3A4A3D` |
+| Terracotta (`--terracotta`) | `#DE9B7E` |
+| Gold (`--gold`) | `#E0C283` |
+| Slate (`--slate`) | `#9DB0BF` |
+| Danger (`--danger`) | `#E89484` |
+| Focus ring (`--focus`) | `#C1D5B8` |
+| Progress track (`--progress-track`) | `#2F3B31` |
 
-The focus indicator uses `#718BFF`. The actual source of truth for the current design tokens is the CSS in `index.html`; update this table if those tokens change.
+The actual source of truth for the current design tokens is the CSS in `index.html`; update these tables if those tokens change.
+
+### Typography
+
+- Interface text uses the platform UI font stack (`system-ui` plus common system fallbacks). No web font is downloaded or required.
+- Editorial content — page titles, the daily quote, journal prompts, and panel notes — uses a serif stack (`Georgia`, `'Times New Roman'`, serif).
+- Numeric readouts such as statistics stay in the UI font stack so figures remain unambiguous.
+- Small section labels ("eyebrows") use sentence case rather than uppercase transforms.
+
+### Habit colors
+
+Habits are colored from a fixed nature palette: `#496B50`, `#C8795A`, `#788A9A`, `#A67C29`, `#5F8A6E`, `#3F6D7A`, `#B4707C`, `#6E7F4E`. Each theme derives two presentation colors per habit from the stored hex: a deepened ink for text and outlines, and a fill for completed states. Both are produced with `color-mix()` so one palette works on the ivory light surface and the green-tinted dark surface.
+
+Habit `color` values are validated against the palette during normalization. A habit whose stored color is not in the current palette is reassigned deterministically by its position in the habit list. Color is presentation only; no habit history is lost when the palette changes.
 
 ### UI conventions
 
@@ -590,6 +627,8 @@ The focus indicator uses `#718BFF`. The actual source of truth for the current d
 - Use consistent spacing, borders, and rounded corners.
 - Preserve legible contrast and focus indicators in both themes.
 - Habit colors are selected from a coordinated palette and should remain distinguishable against both surfaces.
+- Communicate state with text, outlines, or shape as well as color: completed cells use a filled square, scheduled-but-unlogged cells use a hollow ring, and future cells are faded.
+- Keep editorial serif styling for content and titles, and the UI font for controls so interactive text stays crisp.
 
 ---
 
@@ -619,7 +658,8 @@ Even though the app is local-only, browser-side security still matters.
 - Clearing browser data can permanently remove unexported history.
 - JSON import replaces current state rather than merging records.
 - Automated tests cover the app's pure logic (dates, schedules, streaks, statistics, escaping, and backup normalization), but interactive UI flows still rely on manual testing; there is no end-to-end suite.
-- Browser support has not been formalized into a minimum-version matrix.
+- Browser support has not been formalized into a minimum-version matrix. `color-mix()` is required for habit tints and note surfaces, which excludes pre-2023 browser engines.
+- In the light theme, some habit colors are close in luminance to the pale sage progress track and to the soft surface used by heatmap and mosaic cells. Those adjacent-state pairs are distinguished by hue, shape (filled square versus hollow outline), numeric labels, and the on-screen legend rather than by luminance contrast alone, so automated contrast checks report them as informational rather than as failures. Primary text, controls, borders, and focus rings meet WCAG AA.
 - Notifications, scheduled reminders, and native mobile packaging are not part of the current implementation.
 
 ---
