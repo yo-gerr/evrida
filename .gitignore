@@ -1,0 +1,24 @@
+# Exported app backups.
+# These are plain JSON files containing habits and private journal text.
+# Never commit them. Force-add a file only if it is an intentional fixture.
+evrida-backup-*.json
+*backup*.json
+
+# Local QA, screenshot, and browser-profile artifacts.
+shots/
+qa/
+
+# Logs and tooling. The project itself has no dependencies and no build step;
+# this is only a guard in case a local tool installs them.
+*.log
+npm-debug.log*
+node_modules/
+
+# OS metadata.
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editors and IDEs.
+.vscode/
+.idea/
