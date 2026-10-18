@@ -353,6 +353,8 @@ When changing the schema:
 
 Do not include secrets, credentials, or unnecessary metadata in backups.
 
+Backups are plain, readable JSON files that can contain sensitive journal text. Do not commit exported `evrida-backup-*.json` files to a repository; the project `.gitignore` excludes them for that reason.
+
 ---
 
 ## Data model

@@ -74,6 +74,7 @@ Rules:
 - Import is currently a replacement of the whole state, not a merge. Keep the UI copy accurate.
 - Never execute code from a backup or pass imported values to `eval`/`Function`.
 - Keep the existing 5 MB import-file limit unless a deliberate change is requested and documented.
+- Never commit exported backups (`evrida-backup-*.json`); they contain private habit and journal content, and `.gitignore` excludes them.
 
 ## 5. Date, schedule, and progress rules
 
