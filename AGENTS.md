@@ -11,7 +11,7 @@ This file provides instructions for AI coding agents and maintainers working on 
 - Product: a free, local-first habit tracker and personal-growth app.
 - Product principle: support progress without guilt. Do not introduce shame-based streak messaging, punitive scoring, or copy that treats missed days as personal failure.
 
-The current application is intentionally a self-contained HTML file. HTML, CSS, and JavaScript live together in `index.html`. Do not assume a framework, package manager, bundler, backend, or API exists. The only tooling is a zero-dependency Node test suite in `tests/` (see section 12), which does not affect how the app is shipped.
+The current application is intentionally a self-contained HTML file. HTML, CSS, and JavaScript live together in `index.html`. Do not assume a framework, package manager, bundler, backend, or API exists. The only tooling is a zero-dependency Node test suite in `tests/` (see section 12) plus a one-time icon generator in `tools/` (Node built-ins only; never needed to run or ship the app), neither of which affects how the app is shipped.
 
 ## 2. Mandatory workflow
 
@@ -40,6 +40,7 @@ Do not overwrite user changes or replace the application wholesale when a focuse
 - Do not introduce a server, account requirement, or cloud storage as an incidental part of a feature.
 - Avoid broad refactors of rendering, persistence, or date logic unless the task requires them.
 - Keep the app usable as a static file and from a simple static HTTP host.
+- Approved structural addition: small static PWA assets ship alongside `index.html` — `manifest.webmanifest`, `sw.js`, and `icons/` — so the app can be installed and work offline. The application itself remains the single self-contained `index.html`; never move styles or logic into those files, and keep `index.html` runnable directly as a static file.
 
 ## 4. Persistence and migration safety
 

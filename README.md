@@ -46,8 +46,9 @@ Evrida brings several lightweight personal-growth tools together in one place:
 - Save inspirational quotes for later.
 - Switch between system, light, and dark appearance.
 - Export and import a JSON backup.
+- Install to a home screen and keep working offline when served over HTTPS.
 
-The project intentionally favors a portable, understandable implementation over a large framework. The current application is a self-contained `index.html` document with its HTML, CSS, and JavaScript in the same file.
+The project intentionally favors a portable, understandable implementation over a large framework. The current application is a self-contained `index.html` document with its HTML, CSS, and JavaScript in the same file. Small companion assets (`manifest.webmanifest`, `sw.js`, and `icons/`) add optional installation and offline use without changing that model — the app itself remains one file, and `file://` use is unaffected.
 
 ### Intended audience
 
@@ -169,6 +170,14 @@ Users should keep backups somewhere separate from the browser profile. A backup 
 
 Settings includes a destructive action to remove local application data after confirmation. The app also provides an undo mechanism for supported actions, such as some habit-progress changes, habit deletion, intention removal, and clearing local data. Undo availability is action-specific; do not promise that every action can be undone.
 
+### 10. Install and offline use
+
+- A web app manifest (`manifest.webmanifest`) and service worker (`sw.js`) make Evrida installable to a phone's home screen or desktop, opening in its own standalone window without browser chrome.
+- After the first visit over HTTP(S), the app shell (page, styles, script, icons) is cached so Evrida opens even with no network connection.
+- The service worker caches static app files only. It never reads, caches, or transmits user data; habits, journal entries, intentions, and settings remain in `localStorage`.
+- Installation and offline caching require an HTTP(S) origin (`localhost` or HTTPS). Opening `index.html` directly from `file://` works exactly as before, without installation or offline caching, and does not produce console errors.
+- Installing the app does not change where data is stored: the installed app runs on its hosted origin, and existing `file://` data does not automatically follow it. Export a backup before switching, then import it from the new origin.
+
 ---
 
 ## Technology and architecture
@@ -184,6 +193,8 @@ Settings includes a destructive action to remove local application data after co
 | Import/export | JSON, `Blob`, object URLs, browser file input |
 | Dialogs | Native HTML `<dialog>` elements |
 | Icons/illustrations | Emoji, CSS, and inline/data-URI SVG |
+| Install manifest | `manifest.webmanifest` |
+| Offline caching | Service worker (`sw.js`), app-shell files only |
 | Dependencies | No runtime package dependencies |
 | Build step | None required |
 | Server/API | None required |
@@ -246,6 +257,8 @@ The file can be deployed to a static web host. There is no backend to deploy. Th
 
 **Important:** browser storage is origin-specific. Data saved when opening a `file://` URL may not be available when opening the app from `http://localhost`, a different port, or a deployed domain. Export a backup before changing the app's origin, then import it from the new origin.
 
+When the page is served over HTTPS or `localhost`, upload `manifest.webmanifest`, `sw.js`, and the `icons/` folder alongside `index.html`. That enables [Install and offline use](#install-and-offline-use): home-screen installation and an offline app shell. Without them the app still works — installability and offline caching simply do not activate.
+
 ---
 
 ## Using Evrida
@@ -286,6 +299,8 @@ Open Settings or use the header Export action. Store the downloaded JSON file so
 ### Where data lives
 
 The application saves its state in browser `localStorage` under the key `streakgrid`. The key name is intentionally retained for compatibility with earlier Streakgrid-branded builds. Data is scoped to the browser's origin and profile.
+
+A service worker additionally caches the app's static files (page, script, manifest, icons) so the app can open offline. That cache contains app files only — it never stores habits, journal entries, or intentions, and nothing in it is transmitted anywhere.
 
 ### What this means
 
@@ -413,9 +428,19 @@ The current project is intentionally a single-file application:
 
 ```text
 project/
-├── index.html    # HTML structure, styles, application state, UI rendering, and behavior
+├── index.html            # HTML structure, styles, application state, UI rendering, and behavior
+├── manifest.webmanifest  # Web app manifest: installability (name, display, icons)
+├── sw.js                 # Service worker: offline app shell (static files only)
+├── icons/                # App icons generated from the brand mark
+│   ├── icon.svg
+│   ├── icon-180.png          # iOS home screen (apple-touch-icon)
+│   ├── icon-192.png
+│   ├── icon-512.png
+│   └── icon-maskable-512.png # Android adaptive icon
 ├── README.md     # Project overview and developer/user documentation
 ├── AGENTS.md     # Instructions for AI coding agents and maintainers
+├── tools/
+│   └── make-icons.js     # One-time icon generator; never needed to run the app
 └── tests/        # Zero-dependency Node test suite for the app's pure logic
     ├── helpers/
     │   └── load-app.js   # Extracts the inline script and exposes internal helpers
@@ -424,12 +449,14 @@ project/
     ├── streaks.test.js   # Current and best streak calculations
     ├── insights.test.js  # Completion, recovery, and summary statistics
     ├── normalize.test.js # Backup/localStorage validation and sanitization
-    └── escaping.test.js  # HTML escaping of user-controlled strings
+    ├── escaping.test.js  # HTML escaping of user-controlled strings
+    ├── tasks.test.js     # Daily-intention carry-forward and limit rules
+    └── pwa.test.js       # Manifest/service-worker/icon asset sync
 ```
 
 The application file was previously named `Evrida.html`; the rename to `index.html` does not affect stored data, backups, or the `streakgrid` localStorage key.
 
-If tests or additional documentation are introduced, keep this tree updated. There is currently no separate source directory, package manifest, bundler configuration, or automated test suite documented as part of the single-file app.
+If tests or additional documentation are introduced, keep this tree updated. There is no separate source directory, package manifest, bundler configuration, or server code; the `tests/` and `tools/` directories are development tooling only and are not needed to run or ship the app.
 
 ---
 
@@ -479,9 +506,9 @@ The application's pure logic has an automated test suite that runs in Node.js wi
 - **Location:** `tests/`
 - **Runner:** Node's built-in `node:test` module (Node.js 20 or newer; developed against Node 24). There are no npm packages, no `package.json`, and no build step.
 - **Command:** run `node --test` from the project directory.
-- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; and `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input.
+- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; daily-intention carry-forward rules; `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
 - **How it works:** `tests/helpers/load-app.js` reads `index.html`, extracts the inline script, and appends a test-only export hook to the extracted text before evaluating it with minimal DOM stubs. The application file itself is not modified for testability.
-- **Scope:** pure logic only. Rendering, dialogs, undo toasts, file import/export flows, themes, and cross-tab synchronization are not covered and remain manual checks.
+- **Scope:** pure logic and static asset checks only. Rendering, dialogs, undo toasts, file import/export flows, themes, cross-tab synchronization, service-worker caching, installation, and offline behavior are not covered and remain manual checks.
 
 ### Static checks
 
@@ -491,6 +518,7 @@ The application's pure logic has an automated test suite that runs in Node.js wi
 - Search for stale product names and outdated privacy claims.
 - Verify that all referenced element IDs exist.
 - Confirm the app can run without network requests.
+- Confirm `manifest.webmanifest` parses, every icon it references exists, and `sw.js` passes `node --check` (`node --test` covers the manifest and icon presence).
 - Review any new HTML string interpolation for escaping and injection risks.
 
 Example JavaScript syntax check (requires Node.js and a temporary extracted JS file):
@@ -528,6 +556,10 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Existing `streakgrid` local data and earlier valid backups remain usable.
 - [ ] Layout and keyboard focus remain usable on small screens.
 - [ ] No horizontal scrolling appears at phone, tablet, or desktop widths.
+- [ ] Form fields do not trigger page zoom when focused on iOS Safari, in portrait or landscape.
+- [ ] Opening `index.html` from `file://` registers no service worker and logs no console errors.
+- [ ] Over HTTPS or `localhost`, the page offers installation, installs to a home screen or app list, and opens in a standalone window.
+- [ ] After one online visit, the app shell still loads with the network disabled (offline reload).
 - [ ] Editorial serif titles and quotes and UI-font controls render as intended in both themes.
 - [ ] Completed state stays distinguishable without relying on color alone.
 
@@ -564,6 +596,7 @@ When changing the UI:
 - **Tagline:** Every day, a little more you.
 - **Visual direction:** calm, supportive, clean, and personal; progress should feel encouraging rather than competitive. The interface follows an editorial wellness-journal direction: warm ivory surfaces, forest-green accents, rounded cards, restrained shadows, clear hierarchy, and serif type reserved for editorial content.
 - **Brand mark:** forest-green rounded square with a white `E` and a gold accent dot.
+- **App icon:** the same brand mark shipped in `icons/` as SVG and PNG (180/192/512, plus a maskable variant) for installable-app use. Regenerate only with `node tools/make-icons.js`; the geometry must stay in sync with the favicon in `index.html`.
 
 ### Light theme tokens
 
@@ -664,6 +697,7 @@ Even though the app is local-only, browser-side security still matters.
 - Browser support has not been formalized into a minimum-version matrix. `color-mix()` is required for habit tints and note surfaces, which excludes pre-2023 browser engines.
 - In the light theme, some habit colors are close in luminance to the pale sage progress track and to the soft surface used by heatmap and mosaic cells. Those adjacent-state pairs are distinguished by hue, shape (filled square versus hollow outline), numeric labels, and the on-screen legend rather than by luminance contrast alone, so automated contrast checks report them as informational rather than as failures. Primary text, controls, borders, and focus rings meet WCAG AA.
 - Notifications, scheduled reminders, and native mobile packaging are not part of the current implementation.
+- Installation and offline caching require an HTTP(S) origin (`localhost` or HTTPS). The offline cache is a versioned copy of the app's static files, not a backup of user data; clearing site data removes both the cache and `localStorage`.
 
 ---
 
@@ -672,7 +706,6 @@ Even though the app is local-only, browser-side security still matters.
 These are possibilities, not promises or implemented features:
 
 - Add a documented schema-migration strategy for future versions.
-- Add optional installability/PWA support, with a careful offline and storage policy.
 - Add an optional encrypted backup format, with clear key-loss warnings.
 - Improve data portability and offer a backup-restore walkthrough.
 - Add more robust keyboard and screen-reader testing.
@@ -712,6 +745,7 @@ For bug reports, include browser/version, steps to reproduce, expected behavior,
 - [ ] Test a representative older backup if schema code changed.
 - [ ] Confirm destructive actions require confirmation.
 - [ ] Confirm there are no unintended external requests.
+- [ ] If PWA assets changed, re-run `node tools/make-icons.js` only when the mark changes, verify `manifest.webmanifest` and `sw.js` are uploaded alongside `index.html`, and test install plus an offline reload from a static HTTPS host.
 - [ ] Update the displayed app version and this README if the release changes them.
 - [ ] Clearly record any checks that could not be performed.
 
