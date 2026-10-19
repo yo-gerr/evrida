@@ -1250,6 +1250,21 @@
         transition: border-color var(--dur-1) var(--ease);
       }
 
+      /* iOS Safari magnifies the page when a control under 16px receives
+         focus. Keep fields at 16px on touch devices and phone-sized layouts;
+         hover-capable pointers keep the denser 14.5px size. Landscape phones
+         are wider than 650px, which is why the pointer queries are here too. */
+      @media (max-width: 650px), (hover: none) and (pointer: coarse) {
+        input[type='text'],
+        input[type='date'],
+        input[type='number'],
+        input[type='search'],
+        select,
+        textarea {
+          font-size: 16px;
+        }
+      }
+
       textarea {
         min-height: 100px;
         resize: vertical;
