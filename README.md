@@ -81,6 +81,7 @@ This README documents the current single-file implementation. It does not imply 
 - Includes a daily inspirational quote, with the ability to save or unsave it.
 - Provides daily intentions: a lightweight checklist separate from habits.
 - Supports bringing forward unfinished intentions from the previous day, subject to the daily item limit.
+- Limits each intention to 120 characters and each date to 100 intentions; a remaining-character count appears as the limit approaches, and reaching 120 is announced for screen readers.
 
 A habit can have a target greater than one. Reaching the target marks the day complete; partial progress remains visible.
 
@@ -516,7 +517,7 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Mood selection persists.
 - [ ] Saved quotes persist and can be removed.
 - [ ] Daily intentions can be added, completed, deleted, and carried forward.
-- [ ] Daily intention count and text limits are enforced.
+- [ ] Daily intention count and text limits are enforced, and the character count appears as the 120-character limit nears.
 - [ ] System, light, and dark themes work.
 - [ ] Export downloads valid JSON.
 - [ ] Import handles a valid backup, malformed JSON, invalid data, and files larger than 5 MB.

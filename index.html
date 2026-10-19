@@ -938,6 +938,10 @@
         min-width: 0;
       }
 
+      .task-hint {
+        margin: 6px 0 0;
+      }
+
       .task-progress {
         font-size: 12.5px;
         color: var(--muted);
@@ -1437,6 +1441,18 @@
 
       .hidden {
         display: none !important;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
       }
 
       .spacer {
@@ -2322,6 +2338,7 @@
             ? `<div class="task-list">${list.map(t => `<div class="task-row ${t.done ? 'done' : ''}"><input type="checkbox" data-action="task-toggle" data-id="${esc(t.id)}" aria-label="Mark ${esc(t.text)} ${t.done ? 'incomplete' : 'complete'}" ${t.done ? 'checked' : ''}><span class="task-label">${esc(t.text)}</span><button type="button" data-action="task-delete" data-id="${esc(t.id)}" aria-label="Delete task: ${esc(t.text)}" title="Delete task">×</button></div>`).join('')}</div>`
             : `<div class="empty" style="padding:18px;margin-top:12px"><div class="emoji">☀️</div><strong>No tasks for today</strong><p>Add one small intention if it would help. You can also leave this section empty.</p></div>`;
           html += `<form id="taskForm" class="task-add"><input id="taskInput" type="text" maxlength="120" autocomplete="off" placeholder="Add a small intention…" aria-label="New daily intention"><button class="btn primary" type="submit">Add</button></form>`;
+          html += `<p id="taskHint" class="small-text task-hint hidden"></p><span id="taskLimitStatus" class="sr-only" role="status"></span>`;
           if (carry.length)
             html += `<div class="card-actions"><span class="small-text grow">${carry.length} unfinished item${carry.length === 1 ? '' : 's'} from yesterday</span><button class="btn small" type="button" data-action="task-carry">Bring forward</button></div>`;
           html += `<p class="small-text" style="margin:10px 0 0">Unfinished tasks can stay in the past or be brought forward when you choose. They never affect habit streaks or insights.</p></div>`;
@@ -2775,6 +2792,34 @@
           }
           if (activePage === 'today') {
             const form = $('#taskForm');
+            // Character-limit feedback for intentions: a quiet counter appears
+            // as the input nears its 120-character cap, and the cap itself is
+            // announced once through a polite status region instead of on
+            // every keystroke.
+            const input = $('#taskInput'),
+              hint = $('#taskHint'),
+              limitStatus = $('#taskLimitStatus');
+            if (input && hint) {
+              const limit = Number(input.maxLength) || 120;
+              let atLimit = false;
+              const syncHint = () => {
+                const left = Math.max(0, limit - input.value.length),
+                  hit = left === 0;
+                hint.classList.toggle('hidden', left > 20);
+                hint.textContent = hit
+                  ? `${limit} character limit reached.`
+                  : `${left} character${left === 1 ? '' : 's'} left`;
+                if (hit !== atLimit) {
+                  atLimit = hit;
+                  if (limitStatus)
+                    limitStatus.textContent = hit
+                      ? `Character limit reached: ${limit} characters.`
+                      : '';
+                }
+              };
+              input.addEventListener('input', syncHint);
+              syncHint();
+            }
             if (form)
               form.onsubmit = e => {
                 e.preventDefault();
