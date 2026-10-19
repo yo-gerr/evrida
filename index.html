@@ -2295,13 +2295,28 @@
             saved = state.savedQuotes.includes(idx);
           return `<section class="quote-card" aria-label="Daily inspiration"><p class="quote-text">${esc(q.text)}</p><div class="quote-author">— ${esc(q.author)}</div><div class="card-actions"><button data-action="save-quote" data-quote="${idx}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save quote'}</button><span class="grow"></span><button data-page="journal">Journal &amp; reflections →</button></div></section>`;
         }
+        // Unfinished intentions from yesterday that are not already present in
+        // today's list. Yesterday's entries are never modified by carrying, so
+        // this is the single rule that decides both what the "Bring forward"
+        // button offers and what pressing it copies. Matching on both sides
+        // keeps repeated presses from stacking duplicate intentions.
+        function carryPending() {
+          const yKey = shift(today(), -1);
+          const old = Array.isArray(state.tasks?.[yKey]) ? state.tasks[yKey] : [];
+          const have = new Set(
+            (Array.isArray(state.tasks?.[today()]) ? state.tasks[today()] : [])
+              .map(t => String(t.text || '').trim())
+          );
+          return old.filter(
+            t => !t.done && !have.has(String(t.text || '').trim())
+          );
+        }
         function renderTasks() {
           const list = Array.isArray(state.tasks?.[today()])
             ? state.tasks[today()]
             : [];
           const done = list.filter(t => t.done).length;
-          const yesterday = shift(today(), -1);
-          const carry = (state.tasks?.[yesterday] || []).filter(t => !t.done);
+          const carry = carryPending();
           let html = `<div class="panel intentions"><div class="section-title" style="margin:0 0 4px"><h3>Daily intentions</h3><span class="spacer"></span><span class="task-progress">${done} of ${list.length}</span></div><p class="small-text">A few things you would like to do today. These are separate from habits—no streaks, no guilt.</p>`;
           html += list.length
             ? `<div class="task-list">${list.map(t => `<div class="task-row ${t.done ? 'done' : ''}"><input type="checkbox" data-action="task-toggle" data-id="${esc(t.id)}" aria-label="Mark ${esc(t.text)} ${t.done ? 'incomplete' : 'complete'}" ${t.done ? 'checked' : ''}><span class="task-label">${esc(t.text)}</span><button type="button" data-action="task-delete" data-id="${esc(t.id)}" aria-label="Delete task: ${esc(t.text)}" title="Delete task">×</button></div>`).join('')}</div>`
@@ -3035,10 +3050,14 @@
             return;
           }
           if (action === 'task-carry') {
-            const old = (state.tasks?.[shift(today(), -1)] || []).filter(
-              t => !t.done
-            );
-            if (!old.length) return;
+            const old = carryPending();
+            if (!old.length) {
+              notify(
+                "Yesterday's unfinished intentions are already here.",
+                false
+              );
+              return;
+            }
             state.tasks = state.tasks || {};
             state.tasks[today()] = state.tasks[today()] || [];
             const room = Math.max(0, 100 - state.tasks[today()].length);
