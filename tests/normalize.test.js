@@ -134,6 +134,41 @@ test('normalize retains a legacy art object only when it is an object', () => {
   assert.equal(normalize({ habits: [baseHabit({ art: 'text' })] }).habits[0].art, undefined);
 });
 
+test('normalize trims and caps the optional when-and-where cue', () => {
+  assert.equal(
+    normalize({ habits: [baseHabit({ cue: '  After lunch, at my desk  ' })] }).habits[0].cue,
+    'After lunch, at my desk',
+  );
+  assert.equal(normalize({ habits: [baseHabit({ cue: 'x'.repeat(150) })] }).habits[0].cue.length, 100);
+  assert.equal(normalize({ habits: [baseHabit({ cue: 42 })] }).habits[0].cue, '42');
+});
+
+test('normalize omits the cue when missing or blank', () => {
+  assert.equal(normalize({ habits: [baseHabit()] }).habits[0].cue, undefined);
+  assert.equal(normalize({ habits: [baseHabit({ cue: '   ' })] }).habits[0].cue, undefined);
+  assert.equal(normalize({ habits: [baseHabit({ cue: null })] }).habits[0].cue, undefined);
+  assert.ok(!('cue' in normalize({ habits: [baseHabit({ cue: '' })] }).habits[0]));
+});
+
+test('normalize accepts a version 6 backup without a cue (forward compatible)', () => {
+  const s = normalize({
+    version: 6,
+    habits: [baseHabit({ goal: 2, days: [0, 1, 2, 3, 4, 5, 6], done: { '2026-01-05': 1 } })],
+  });
+  assert.equal(s.version, VERSION);
+  assert.equal(s.habits[0].cue, undefined);
+  assert.deepEqual(s.habits[0].done, { '2026-01-05': 1 });
+});
+
+test('normalize round-trips a habit cue through export-style JSON', () => {
+  const state = normalize({ habits: [baseHabit({ cue: 'After I pour my coffee, at the kitchen table' })] });
+  const exported = JSON.parse(JSON.stringify({ ...state, app: 'Evrida', exportedAt: '2026-01-01T00:00:00Z' }));
+  assert.equal(
+    normalize(exported).habits[0].cue,
+    'After I pour my coffee, at the kitchen table',
+  );
+});
+
 // --- Gallery, journal, saved quotes, tasks, settings -----------------------
 
 test('normalize filters gallery entries to the last 100 objects', () => {
@@ -210,7 +245,7 @@ test('normalize whitelists the theme setting', () => {
 
 test('normalize is a no-op on its own output (idempotent)', () => {
   const rich = normalize({
-    habits: [baseHabit({ goal: 2, days: [1, 3], done: { '2026-01-05': 2 }, category: 'Learning' })],
+    habits: [baseHabit({ goal: 2, days: [1, 3], done: { '2026-01-05': 2 }, category: 'Learning', cue: 'After lunch' })],
     gallery: [{ i: 1 }],
     journal: { '2026-01-15': { note: 'hello', mood: 'good' } },
     savedQuotes: [1],

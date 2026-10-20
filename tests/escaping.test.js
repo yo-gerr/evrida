@@ -25,3 +25,13 @@ test('esc coerces non-string values', () => {
   assert.equal(esc(42), '42');
   assert.equal(esc(undefined), 'undefined');
 });
+
+test('esc neutralizes a habit cue containing markup before it reaches a card', () => {
+  const { normalize } = require('./helpers/load-app').loadApp();
+  const cue = normalize({ habits: [{ name: 'Read', cue: '<script>alert(1)</script> at my desk' }] }).habits[0].cue;
+  assert.equal(cue, '<script>alert(1)</script> at my desk');
+  assert.equal(
+    esc(cue),
+    '&lt;script&gt;alert(1)&lt;/script&gt; at my desk',
+  );
+});

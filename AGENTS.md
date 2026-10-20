@@ -47,7 +47,7 @@ Do not overwrite user changes or replace the application wholesale when a focuse
 The current persistence constants are:
 
 - localStorage key: `streakgrid`
-- schema version: `6`
+- schema version: `7`
 
 The key name is a deliberate compatibility choice from the app's previous Streakgrid branding. **Do not rename the key to `evrida` just to match the new brand.** That could make existing local data appear lost. If a storage-key migration is explicitly requested, read the old key, validate and migrate its contents, save the new state safely, and preserve a recovery path.
 
@@ -61,7 +61,7 @@ Current root state includes:
 - `tasks`
 - `settings.theme`
 
-Exports add `app: "Evrida"` and `exportedAt` metadata. Current normalization uses version 6 and validates the principal data fields.
+Exports add `app: "Evrida"` and `exportedAt` metadata. Current normalization uses version 7 and validates the principal data fields.
 
 Rules:
 
@@ -218,7 +218,7 @@ Daily intentions are separate from habits. Journal entries are optional and must
 
 - Exported filename currently follows `evrida-backup-YYYY-MM-DD.json`.
 - Export includes `app: "Evrida"` and an ISO timestamp in `exportedAt`.
-- The app's current root schema version is 6.
+- The app's current root schema version is 7.
 - Import must validate the selected JSON, normalize it, request confirmation, and create a safety export before replacing current state.
 - Invalid JSON and invalid data must produce a useful message without corrupting current state.
 - Keep file-size limits and array/field limits intentional and documented.

@@ -659,6 +659,21 @@
         font-size: 12.5px;
       }
 
+      /* Implementation intention ("when and where") — personal prose, so it
+         uses the editorial serif like other reflective content. */
+      .habit-cue {
+        margin: 0 0 5px;
+        font-family: var(--font-editorial);
+        font-style: italic;
+        font-size: 13px;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+
+      .hint {
+        margin: var(--sp-2) 0 0;
+      }
+
       .category-tag {
         display: inline-block;
         background: var(--soft);
@@ -1771,6 +1786,16 @@
           />
         </div>
         <div class="field">
+          <label for="habitCue">When and where? (optional)</label
+          ><input
+            id="habitCue"
+            type="text"
+            maxlength="100"
+            placeholder="e.g. After lunch, at my desk"
+          />
+          <p class="small-text muted hint">Naming a time and place makes follow-through more likely. “After I brush my teeth, at the bathroom sink” works too.</p>
+        </div>
+        <div class="field">
           <label>Icon</label>
           <div class="emoji-pick" id="emojiPick"></div>
         </div>
@@ -1852,7 +1877,7 @@
         'use strict';
         // Keep the legacy storage key so existing Streakgrid data remains available after rebranding.
         const KEY = 'streakgrid';
-        const VERSION = 6;
+        const VERSION = 7;
         const CATEGORIES = [
           'Health & Fitness',
           'Learning',
@@ -2081,6 +2106,9 @@
               String(h.category || 'General')
                 .trim()
                 .slice(0, 32) || 'General';
+            const cue = String(h.cue || '')
+              .trim()
+              .slice(0, 100);
             return {
               id: String(h.id || `h${Date.now()}${i}`),
               name,
@@ -2093,7 +2121,8 @@
                 ? h.color
                 : COLORS[i % COLORS.length],
               done,
-              ...(h.art && typeof h.art === 'object' ? { art: h.art } : {})
+              ...(h.art && typeof h.art === 'object' ? { art: h.art } : {}),
+              ...(cue ? { cue } : {})
             };
           });
           const gallery = Array.isArray(raw.gallery)
@@ -2356,7 +2385,7 @@
           const counterHint = done
             ? 'At your target. Press and hold to subtract one.'
             : 'Tap to add one; press and hold to subtract one.';
-          return `<article class="habit-card" style="--hc:${h.color}"><div class="habit-top"><div class="habit-icon" aria-hidden="true">${esc(h.icon)}</div><div class="habit-info"><h3>${esc(h.name)}</h3><p>${currentStreak(h)}-day streak · best ${bestStreak(h)}</p><span class="category-tag">${esc(h.category || 'General')}</span></div><button class="count-btn ${done ? 'done' : c ? 'partial' : ''}" data-action="count" data-id="${esc(h.id)}" aria-label="${esc(h.name)}: ${c} of ${g} today. ${counterHint}" title="${stateLabel} · ${c}/${g} — ${done ? 'hold to subtract' : 'tap adds one, hold subtracts'}">${c}/${g}</button></div>${g > 1 ? `<div class="progress-row"><div class="track" role="progressbar" aria-label="${esc(h.name)} progress" aria-valuemin="0" aria-valuemax="${g}" aria-valuenow="${c}"><span style="width:${pctVal}%"></span></div><span class="progress-label">${pctVal}%</span></div>` : ''}<div class="card-actions"><span class="small-text">${h.days.length === 7 ? 'Every day' : h.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(' · ')}</span><span class="grow"></span><button data-action="history" data-id="${esc(h.id)}">History</button><button data-action="edit" data-id="${esc(h.id)}">Edit</button></div></article>`;
+          return `<article class="habit-card" style="--hc:${h.color}"><div class="habit-top"><div class="habit-icon" aria-hidden="true">${esc(h.icon)}</div><div class="habit-info"><h3>${esc(h.name)}</h3>${h.cue ? `<p class="habit-cue">${esc(h.cue)}</p>` : ''}<p>${currentStreak(h)}-day streak · best ${bestStreak(h)}</p><span class="category-tag">${esc(h.category || 'General')}</span></div><button class="count-btn ${done ? 'done' : c ? 'partial' : ''}" data-action="count" data-id="${esc(h.id)}" aria-label="${esc(h.name)}: ${c} of ${g} today. ${counterHint}" title="${stateLabel} · ${c}/${g} — ${done ? 'hold to subtract' : 'tap adds one, hold subtracts'}">${c}/${g}</button></div>${g > 1 ? `<div class="progress-row"><div class="track" role="progressbar" aria-label="${esc(h.name)} progress" aria-valuemin="0" aria-valuemax="${g}" aria-valuenow="${c}"><span style="width:${pctVal}%"></span></div><span class="progress-label">${pctVal}%</span></div>` : ''}<div class="card-actions"><span class="small-text">${h.days.length === 7 ? 'Every day' : h.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(' · ')}</span><span class="grow"></span><button data-action="history" data-id="${esc(h.id)}">History</button><button data-action="edit" data-id="${esc(h.id)}">Edit</button></div></article>`;
         }
         function quoteForToday() {
           const n = Number(today().replaceAll('-', ''));
@@ -2956,6 +2985,7 @@
           const h = state.habits.find(x => x.id === id);
           $('#dialogTitle').textContent = h ? 'Edit habit' : 'Create a habit';
           $('#habitName').value = h?.name || '';
+          $('#habitCue').value = h?.cue || '';
           $('#habitGoal').value = h ? goal(h) : 1;
           $('#habitStart').value = h?.start || today();
           $('#habitStart').max = today();
@@ -3029,6 +3059,7 @@
           const name = $('#habitName').value.trim(),
             g = Number($('#habitGoal').value),
             start = $('#habitStart').value,
+            cue = $('#habitCue').value.trim().slice(0, 100),
             category =
               $('#habitCategory').value === '__custom__'
                 ? $('#customCategory').value.trim()
@@ -3061,6 +3092,8 @@
               icon: pickedEmoji,
               color: pickedColor
             });
+            if (cue) h.cue = cue;
+            else delete h.cue;
           } else
             state.habits.push({
               id: `h${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
@@ -3071,7 +3104,8 @@
               days: [...pickedDays],
               icon: pickedEmoji,
               color: pickedColor,
-              done: {}
+              done: {},
+              ...(cue ? { cue } : {})
             });
           save();
           $('#habitDialog').close();
