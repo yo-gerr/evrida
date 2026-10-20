@@ -1785,16 +1785,27 @@
             required
           />
         </div>
-        <div class="field">
-          <label for="habitCue">When and where? (optional)</label
-          ><input
-            id="habitCue"
-            type="text"
-            maxlength="100"
-            placeholder="e.g. After lunch, at my desk"
-          />
-          <p class="small-text muted hint">Naming a time and place makes follow-through more likely. “After I brush my teeth, at the bathroom sink” works too.</p>
+        <div class="two">
+          <div class="field">
+            <label for="habitWhen">When? (optional)</label
+            ><input
+              id="habitWhen"
+              type="text"
+              maxlength="60"
+              placeholder="e.g. after lunch"
+            />
+          </div>
+          <div class="field">
+            <label for="habitWhere">Where? (optional)</label
+            ><input
+              id="habitWhere"
+              type="text"
+              maxlength="60"
+              placeholder="e.g. at my desk"
+            />
+          </div>
         </div>
+        <p class="small-text muted hint">Naming a time and place makes follow-through more likely. A trigger counts as a when: “after I brush my teeth” works too.</p>
         <div class="field">
           <label>Icon</label>
           <div class="emoji-pick" id="emojiPick"></div>
@@ -1877,7 +1888,7 @@
         'use strict';
         // Keep the legacy storage key so existing Streakgrid data remains available after rebranding.
         const KEY = 'streakgrid';
-        const VERSION = 7;
+        const VERSION = 8;
         const CATEGORIES = [
           'Health & Fitness',
           'Learning',
@@ -2106,9 +2117,17 @@
               String(h.category || 'General')
                 .trim()
                 .slice(0, 32) || 'General';
-            const cue = String(h.cue || '')
+            // Implementation intention: separate when/where. A legacy single
+            // `cue` from an earlier build migrates into `when` so no text is
+            // lost, and is dropped from output so normalization stays stable.
+            const when = String(h.when || h.cue || '')
+              .replace(/\s+/g, ' ')
               .trim()
-              .slice(0, 100);
+              .slice(0, 60);
+            const where = String(h.where || '')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .slice(0, 60);
             return {
               id: String(h.id || `h${Date.now()}${i}`),
               name,
@@ -2122,7 +2141,8 @@
                 : COLORS[i % COLORS.length],
               done,
               ...(h.art && typeof h.art === 'object' ? { art: h.art } : {}),
-              ...(cue ? { cue } : {})
+              ...(when ? { when } : {}),
+              ...(where ? { where } : {})
             };
           });
           const gallery = Array.isArray(raw.gallery)
@@ -2371,6 +2391,16 @@
         function empty(title, desc, button = 'Create your first habit') {
           return `<div class="empty"><div class="emoji">🌱</div><h3>${title}</h3><p>${desc}</p><button class="btn primary" data-action="new">＋ ${button}</button></div>`;
         }
+        // Display-only implementation-intention sentence. Assembled from the
+        // stored name/when/where parts and never persisted, so edits and
+        // missing parts stay correct. Returns '' when there is nothing to say.
+        function cueSentence(h) {
+          const name = String(h.name || '').trim();
+          const when = String(h.when || '').trim();
+          const where = String(h.where || '').trim();
+          if (!name || (!when && !where)) return '';
+          return `I will ${name}${when ? ' ' + when : ''}${where ? ' ' + where : ''}`;
+        }
         function habitCard(h, mode = 'today') {
           const k = today(),
             c = count(h, k),
@@ -2385,7 +2415,7 @@
           const counterHint = done
             ? 'At your target. Press and hold to subtract one.'
             : 'Tap to add one; press and hold to subtract one.';
-          return `<article class="habit-card" style="--hc:${h.color}"><div class="habit-top"><div class="habit-icon" aria-hidden="true">${esc(h.icon)}</div><div class="habit-info"><h3>${esc(h.name)}</h3>${h.cue ? `<p class="habit-cue">${esc(h.cue)}</p>` : ''}<p>${currentStreak(h)}-day streak · best ${bestStreak(h)}</p><span class="category-tag">${esc(h.category || 'General')}</span></div><button class="count-btn ${done ? 'done' : c ? 'partial' : ''}" data-action="count" data-id="${esc(h.id)}" aria-label="${esc(h.name)}: ${c} of ${g} today. ${counterHint}" title="${stateLabel} · ${c}/${g} — ${done ? 'hold to subtract' : 'tap adds one, hold subtracts'}">${c}/${g}</button></div>${g > 1 ? `<div class="progress-row"><div class="track" role="progressbar" aria-label="${esc(h.name)} progress" aria-valuemin="0" aria-valuemax="${g}" aria-valuenow="${c}"><span style="width:${pctVal}%"></span></div><span class="progress-label">${pctVal}%</span></div>` : ''}<div class="card-actions"><span class="small-text">${h.days.length === 7 ? 'Every day' : h.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(' · ')}</span><span class="grow"></span><button data-action="history" data-id="${esc(h.id)}">History</button><button data-action="edit" data-id="${esc(h.id)}">Edit</button></div></article>`;
+          return `<article class="habit-card" style="--hc:${h.color}"><div class="habit-top"><div class="habit-icon" aria-hidden="true">${esc(h.icon)}</div><div class="habit-info"><h3>${esc(h.name)}</h3>${cueSentence(h) ? `<p class="habit-cue">${esc(cueSentence(h))}</p>` : ''}<p>${currentStreak(h)}-day streak · best ${bestStreak(h)}</p><span class="category-tag">${esc(h.category || 'General')}</span></div><button class="count-btn ${done ? 'done' : c ? 'partial' : ''}" data-action="count" data-id="${esc(h.id)}" aria-label="${esc(h.name)}: ${c} of ${g} today. ${counterHint}" title="${stateLabel} · ${c}/${g} — ${done ? 'hold to subtract' : 'tap adds one, hold subtracts'}">${c}/${g}</button></div>${g > 1 ? `<div class="progress-row"><div class="track" role="progressbar" aria-label="${esc(h.name)} progress" aria-valuemin="0" aria-valuemax="${g}" aria-valuenow="${c}"><span style="width:${pctVal}%"></span></div><span class="progress-label">${pctVal}%</span></div>` : ''}<div class="card-actions"><span class="small-text">${h.days.length === 7 ? 'Every day' : h.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(' · ')}</span><span class="grow"></span><button data-action="history" data-id="${esc(h.id)}">History</button><button data-action="edit" data-id="${esc(h.id)}">Edit</button></div></article>`;
         }
         function quoteForToday() {
           const n = Number(today().replaceAll('-', ''));
@@ -2985,7 +3015,8 @@
           const h = state.habits.find(x => x.id === id);
           $('#dialogTitle').textContent = h ? 'Edit habit' : 'Create a habit';
           $('#habitName').value = h?.name || '';
-          $('#habitCue').value = h?.cue || '';
+          $('#habitWhen').value = h?.when || '';
+          $('#habitWhere').value = h?.where || '';
           $('#habitGoal').value = h ? goal(h) : 1;
           $('#habitStart').value = h?.start || today();
           $('#habitStart').max = today();
@@ -3059,7 +3090,8 @@
           const name = $('#habitName').value.trim(),
             g = Number($('#habitGoal').value),
             start = $('#habitStart').value,
-            cue = $('#habitCue').value.trim().slice(0, 100),
+            when = $('#habitWhen').value.replace(/\s+/g, ' ').trim().slice(0, 60),
+            where = $('#habitWhere').value.replace(/\s+/g, ' ').trim().slice(0, 60),
             category =
               $('#habitCategory').value === '__custom__'
                 ? $('#customCategory').value.trim()
@@ -3092,8 +3124,10 @@
               icon: pickedEmoji,
               color: pickedColor
             });
-            if (cue) h.cue = cue;
-            else delete h.cue;
+            if (when) h.when = when;
+            else delete h.when;
+            if (where) h.where = where;
+            else delete h.where;
           } else
             state.habits.push({
               id: `h${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
@@ -3105,7 +3139,8 @@
               icon: pickedEmoji,
               color: pickedColor,
               done: {},
-              ...(cue ? { cue } : {})
+              ...(when ? { when } : {}),
+              ...(where ? { where } : {})
             });
           save();
           $('#habitDialog').close();

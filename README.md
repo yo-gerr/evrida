@@ -92,7 +92,7 @@ A habit can have a target greater than one. Reaching the target marks the day co
 Each habit can include:
 
 - Name (up to 60 characters).
-- An optional "when and where" cue (up to 100 characters) — an implementation intention such as "After lunch, at my desk" that names the moment and place for the habit.
+- An optional "when" and "where" (up to 60 characters each) — implementation intentions such as "after lunch" and "at my desk", composed on cards into a sentence: "I will read 10 pages after lunch at my desk."
 - Daily target (integer from 1 to 99).
 - Start date, not later than today.
 - Category, including a custom category.
@@ -218,7 +218,7 @@ The application is an immediately invoked JavaScript function. Its main state is
 The current implementation includes these concepts:
 
 - `KEY`: localStorage key. It is currently `streakgrid` for backward compatibility with earlier versions.
-- `VERSION`: current persisted schema version, currently `7`.
+- `VERSION`: current persisted schema version, currently `8`.
 - `CATEGORIES`, `COLORS`, `EMOJIS`, `DAYS`, `NAV`, and `QUOTES`: application configuration and built-in content.
 
 Do not rename the storage key merely because the product has been rebranded. Doing so can make existing data appear to have disappeared. If the key is ever changed, implement a tested migration that reads the previous key and preserves data.
@@ -268,8 +268,8 @@ When the page is served over HTTPS or `localhost`, upload `manifest.webmanifest`
 ### Create a habit
 
 1. Choose **New habit**.
-2. Enter a descriptive name.
-3. Optionally add a "when and where" cue — naming a time and place, for example "After lunch, at my desk" or "After I brush my teeth, at the bathroom sink."
+2. Enter a descriptive name — this becomes the behavior in the commitment sentence.
+3. Optionally name **When?** and **Where?**, for example "after lunch" and "at my desk". A trigger works as a when: "after I brush my teeth."
 4. Set the daily target.
 5. Select the start date.
 6. Choose a category or enter a custom category.
@@ -277,7 +277,7 @@ When the page is served over HTTPS or `localhost`, upload `manifest.webmanifest`
 8. Choose an emoji and color.
 9. Save the habit.
 
-The cue is optional and free-form: it is a planning prompt grounded in implementation-intention research, never a reminder or a notification. It appears under the habit name on Today and Habits cards in muted italic, and it does not affect scheduling, streaks, or insights.
+When, where, and the habit name are combined on the habit card into a display-only sentence — *"I will read 10 pages after lunch at my desk"* — built from whichever parts you fill in and never stored as generated text. The fields are optional planning prompts grounded in implementation-intention research, never reminders or notifications, and they do not affect scheduling, streaks, or insights. Habits created before this feature are unaffected; an earlier single "when and where" note is migrated into the **When?** field.
 
 Prefer small, measurable targets. For example, “Read 10 pages” is more actionable than “Read more.”
 
@@ -386,7 +386,7 @@ The following describes the current logical state. It is documentation for the c
 
 | Property | Purpose |
 |---|---|
-| `version` | Persisted schema version (`7` in the current build) |
+| `version` | Persisted schema version (`8` in the current build) |
 | `habits` | Array of habit records |
 | `gallery` | Array of optional gallery-related records retained by normalization |
 | `journal` | Object keyed by date (`YYYY-MM-DD`) |
@@ -409,7 +409,8 @@ Exports additionally include `app` and `exportedAt` metadata.
 | `icon` | Emoji selected for the habit |
 | `color` | Selected color from the app palette; values outside the palette are reassigned by habit position during normalization |
 | `done` | Object mapping dates to recorded counts |
-| `cue` | Optional implementation intention — a free-text "when and where" line, up to 100 characters; omitted entirely when empty |
+| `when` | Optional implementation intention ("when") — free text up to 60 characters, e.g. `after lunch` or `after I brush my teeth`; omitted when empty |
+| `where` | Optional implementation intention ("where") — free text up to 60 characters, e.g. `at my desk`; omitted when empty |
 | `art` | Optional legacy/additional object retained when present by normalization |
 
 A completion count is capped at 999 during normalization and normal interaction. A date only contributes to scheduled-day metrics when it is on or after the start date and matches the habit's schedule.
@@ -512,7 +513,7 @@ The application's pure logic has an automated test suite that runs in Node.js wi
 - **Location:** `tests/`
 - **Runner:** Node's built-in `node:test` module (Node.js 20 or newer; developed against Node 24). There are no npm packages, no `package.json`, and no build step.
 - **Command:** run `node --test` from the project directory.
-- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; daily-intention carry-forward rules; `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input, the optional when-and-where cue, and backward compatibility with version 6 backups; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
+- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; the implementation-intention sentence builder; daily-intention carry-forward rules; `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input, the optional when/where fields, legacy cue migration, and backward compatibility with version 6 and 7 backups; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
 - **How it works:** `tests/helpers/load-app.js` reads `index.html`, extracts the inline script, and appends a test-only export hook to the extracted text before evaluating it with minimal DOM stubs. The application file itself is not modified for testability.
 - **Scope:** pure logic and static asset checks only. Rendering, dialogs, undo toasts, file import/export flows, themes, cross-tab synchronization, service-worker caching, installation, and offline behavior are not covered and remain manual checks.
 
@@ -540,7 +541,7 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] App opens with no JavaScript errors.
 - [ ] Empty state is clear and allows a habit to be created.
 - [ ] A habit can be created, edited, and deleted.
-- [ ] The optional "when and where" cue saves, shows in italic under the habit name on Today and Habits cards, disappears from the card when cleared on edit, and renders markup-like text as plain text rather than HTML.
+- [ ] The optional When?/Where? fields save, compose into an "I will …" sentence in italic under the habit name on Today and Habits cards, drop out of the sentence when cleared on edit, survive a backup round-trip, and render markup-like text as plain text rather than HTML.
 - [ ] Invalid targets, names, categories, start dates, and empty schedules are rejected.
 - [ ] Daily progress supports partial counts and target completion.
 - [ ] The habit counter adds one on tap, ignores rapid double-taps, stops at the target, subtracts one on press-and-hold (and on Shift+Enter), and each change shows the Undo toast.
