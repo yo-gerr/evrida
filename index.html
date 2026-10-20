@@ -631,41 +631,67 @@
         font-weight: 600;
       }
 
-      .complete {
-        width: 44px;
+      .count-btn {
         height: 44px;
+        min-width: 44px;
+        padding: 0 12px;
         flex: none;
-        border-radius: 50%;
+        border-radius: var(--r-pill);
         border: 2px solid var(--hcText);
         background: transparent;
         color: var(--hcText);
-        font-size: 20px;
+        font-size: 15px;
         font-weight: 800;
         line-height: 1;
+        font-variant-numeric: tabular-nums;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        /* One control, two gestures: tap adds one, press and hold subtracts
+           one. No text selection or double-tap zoom, and the growing fill
+           below shows the hold progress. */
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        position: relative;
+        overflow: hidden;
         transition:
           background var(--dur-2) var(--ease),
           border-color var(--dur-2) var(--ease),
           color var(--dur-2) var(--ease);
       }
 
-      .complete:hover {
+      .count-btn:hover {
         background: color-mix(in srgb, var(--hc) 8%, transparent);
       }
 
-      .complete.partial {
+      .count-btn.partial {
         background: color-mix(in srgb, var(--hc) 18%, var(--card));
         color: var(--ink);
-        font-size: 16px;
-        font-weight: 800;
       }
 
-      .complete.done {
+      .count-btn.done {
         background: var(--hcFill);
         border-color: var(--hcFill);
         color: var(--accentInk);
+      }
+
+      /* Hold-to-subtract feedback: a fill grows across the button during the
+         hold and the decrement fires when it completes. */
+      .count-btn::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: color-mix(in srgb, var(--hc) 35%, transparent);
+        transform: scaleX(0);
+        transform-origin: left center;
+        transition: transform 600ms linear;
+        pointer-events: none;
+      }
+
+      .count-btn.holding::after {
+        transform: scaleX(1);
       }
 
       .progress-row {
@@ -1606,9 +1632,9 @@
           padding: var(--sp-4);
         }
 
-        .complete {
-          width: 46px;
+        .count-btn {
           height: 46px;
+          min-width: 46px;
         }
 
         .weekday-pick button {
@@ -2289,7 +2315,10 @@
             : c
               ? 'In progress'
               : 'Not started';
-          return `<article class="habit-card" style="--hc:${h.color}"><div class="habit-top"><div class="habit-icon" aria-hidden="true">${esc(h.icon)}</div><div class="habit-info"><h3>${esc(h.name)}</h3><p>${g > 1 ? `${c} of ${g} today · ` : ''}${currentStreak(h)}-day streak · best ${bestStreak(h)}</p><span class="category-tag">${esc(h.category || 'General')}</span></div><button class="complete ${done ? 'done' : c ? 'partial' : ''}" data-action="toggle" data-id="${esc(h.id)}" aria-label="${done ? 'Mark ' + esc(h.name) + ' incomplete' : 'Complete ' + esc(h.name)}" title="${stateLabel}">${done ? '✓' : c ? c : '○'}</button></div>${g > 1 ? `<div class="progress-row"><div class="track" role="progressbar" aria-label="${esc(h.name)} progress" aria-valuemin="0" aria-valuemax="${g}" aria-valuenow="${c}"><span style="width:${pctVal}%"></span></div><span class="progress-label">${pctVal}%</span><button class="btn small" data-action="minus" data-id="${esc(h.id)}" aria-label="Decrease count" ${c <= 0 ? 'disabled' : ''}>−</button><button class="btn small" data-action="plus" data-id="${esc(h.id)}" aria-label="Increase count">＋</button></div>` : ''}<div class="card-actions"><span class="small-text">${h.days.length === 7 ? 'Every day' : h.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(' · ')}</span><span class="grow"></span><button data-action="history" data-id="${esc(h.id)}">History</button><button data-action="edit" data-id="${esc(h.id)}">Edit</button></div></article>`;
+          const counterHint = done
+            ? 'At your target. Press and hold to subtract one.'
+            : 'Tap to add one; press and hold to subtract one.';
+          return `<article class="habit-card" style="--hc:${h.color}"><div class="habit-top"><div class="habit-icon" aria-hidden="true">${esc(h.icon)}</div><div class="habit-info"><h3>${esc(h.name)}</h3><p>${currentStreak(h)}-day streak · best ${bestStreak(h)}</p><span class="category-tag">${esc(h.category || 'General')}</span></div><button class="count-btn ${done ? 'done' : c ? 'partial' : ''}" data-action="count" data-id="${esc(h.id)}" aria-label="${esc(h.name)}: ${c} of ${g} today. ${counterHint}" title="${stateLabel} · ${c}/${g} — ${done ? 'hold to subtract' : 'tap adds one, hold subtracts'}">${c}/${g}</button></div>${g > 1 ? `<div class="progress-row"><div class="track" role="progressbar" aria-label="${esc(h.name)} progress" aria-valuemin="0" aria-valuemax="${g}" aria-valuenow="${c}"><span style="width:${pctVal}%"></span></div><span class="progress-label">${pctVal}%</span></div>` : ''}<div class="card-actions"><span class="small-text">${h.days.length === 7 ? 'Every day' : h.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(' · ')}</span><span class="grow"></span><button data-action="history" data-id="${esc(h.id)}">History</button><button data-action="edit" data-id="${esc(h.id)}">Edit</button></div></article>`;
         }
         function quoteForToday() {
           const n = Number(today().replaceAll('-', ''));
@@ -2788,6 +2817,15 @@
           root
             .querySelectorAll('[data-action]')
             .forEach(b => b.addEventListener('click', handleAction));
+          // Press-and-hold subtracts one on the habit counter; the OS
+          // long-press menu is suppressed so the gesture stays ours.
+          root.querySelectorAll('[data-action="count"]').forEach(b => {
+            b.addEventListener('pointerdown', startCountHold);
+            b.addEventListener('pointerup', endCountHold);
+            b.addEventListener('pointerleave', endCountHold);
+            b.addEventListener('pointercancel', endCountHold);
+            b.addEventListener('contextmenu', (ev) => ev.preventDefault());
+          });
           root.querySelectorAll('[data-page]').forEach(b =>
             b.addEventListener('click', () => {
               activePage = b.dataset.page;
@@ -3032,6 +3070,34 @@
             else delete h.done[k];
           });
         }
+        // Habit counter gestures: tap adds one toward the target, press and
+        // hold subtracts one. Module-level state is required because
+        // changeCount() re-renders the card, replacing the button mid-gesture.
+        const COUNT_HOLD_MS = 600,
+          COUNT_TAP_DEBOUNCE_MS = 400,
+          COUNT_CLICK_SUPPRESS_MS = 700;
+        let countHoldTimer = null,
+          suppressCountClickUntil = 0,
+          lastCountTapAt = 0;
+        function startCountHold(e) {
+          if (e.button) return; // primary mouse button or touch only
+          const btn = e.currentTarget;
+          btn.classList.add('holding');
+          clearTimeout(countHoldTimer);
+          countHoldTimer = setTimeout(() => {
+            countHoldTimer = null;
+            suppressCountClickUntil = performance.now() + COUNT_CLICK_SUPPRESS_MS;
+            const h = state.habits.find(x => x.id === btn.dataset.id);
+            if (h && count(h, today()) > 0) {
+              changeCount(h, today(), count(h, today()) - 1);
+            }
+          }, COUNT_HOLD_MS);
+        }
+        function endCountHold(e) {
+          if (e && e.currentTarget) e.currentTarget.classList.remove('holding');
+          clearTimeout(countHoldTimer);
+          countHoldTimer = null;
+        }
         async function exportData() {
           const data = JSON.stringify(
             { ...state, app: 'Evrida', exportedAt: new Date().toISOString() },
@@ -3223,16 +3289,20 @@
             }
             return;
           }
-          if (action === 'toggle' && h) {
-            changeCount(h, today(), completed(h, today()) ? 0 : goal(h));
-            return;
-          }
-          if (action === 'plus' && h) {
-            changeCount(h, today(), count(h, today()) + 1);
-            return;
-          }
-          if (action === 'minus' && h) {
-            changeCount(h, today(), count(h, today()) - 1);
+          if (action === 'count' && h) {
+            const g = goal(h),
+              c = count(h, today());
+            if (e.shiftKey) {
+              if (c > 0) changeCount(h, today(), c - 1);
+              return;
+            }
+            // The click that ends a long-press must not also add one.
+            if (performance.now() < suppressCountClickUntil) return;
+            // Swallow accidental double-taps; real counting is paced slower.
+            if (performance.now() - lastCountTapAt < COUNT_TAP_DEBOUNCE_MS)
+              return;
+            lastCountTapAt = performance.now();
+            if (c < g) changeCount(h, today(), c + 1); // at target: no-op
             return;
           }
           if (action === 'history' && h) {

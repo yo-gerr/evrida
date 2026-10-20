@@ -77,14 +77,14 @@ This README documents the current single-file implementation. It does not imply 
 ### 1. Today dashboard
 
 - Shows habits applicable to the current date.
-- Allows users to mark a habit complete or record incremental progress toward its target.
+- Each habit has a single counter button showing the current count against the target (for example `3/5`): tapping it adds one, and pressing and holding it subtracts one.
 - Displays progress toward the daily target.
 - Includes a daily inspirational quote, with the ability to save or unsave it.
 - Provides daily intentions: a lightweight checklist separate from habits.
 - Supports bringing forward unfinished intentions from the previous day, subject to the daily item limit.
 - Limits each intention to 120 characters and each date to 100 intentions; a remaining-character count appears as the limit approaches, and reaching 120 is announced for screen readers.
 
-A habit can have a target greater than one. Reaching the target marks the day complete; partial progress remains visible.
+A habit can have a target greater than one. Reaching the target marks the day complete; partial progress remains visible. Taps stop at the daily target, an accidental double-tap is ignored, and every change is followed by an undo toast. Keyboard users press Enter to add one and Shift+Enter to subtract one.
 
 ### 2. Habit management
 
@@ -278,7 +278,7 @@ Prefer small, measurable targets. For example, “Read 10 pages” is more actio
 
 ### Record progress
 
-Use the habit's completion control to mark the target complete, or use the incremental controls when the target represents multiple repetitions. Progress cannot be recorded for future dates or dates before the habit's start date.
+Tap a habit's counter to add one toward its daily target; the counter shows the current count, for example `3/5`. Press and hold the counter to subtract one — useful for correcting an accidental tap — and hold long enough only to trigger one decrement. Quick double-taps are ignored, taps stop at the daily target, and a toast with an Undo button follows every change. Keyboard users press Enter to add one and Shift+Enter to subtract one. Progress cannot be recorded for future dates or dates before the habit's start date.
 
 ### Review trends
 
@@ -536,6 +536,7 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] A habit can be created, edited, and deleted.
 - [ ] Invalid targets, names, categories, start dates, and empty schedules are rejected.
 - [ ] Daily progress supports partial counts and target completion.
+- [ ] The habit counter adds one on tap, ignores rapid double-taps, stops at the target, subtracts one on press-and-hold (and on Shift+Enter), and each change shows the Undo toast.
 - [ ] Future dates and pre-start dates cannot be logged.
 - [ ] Scheduled weekdays are respected by history, streaks, and completion rates.
 - [ ] History and gallery show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
