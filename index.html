@@ -407,6 +407,44 @@
         font-size: 12.5px;
       }
 
+      [hidden] {
+        display: none !important;
+      }
+
+      .section-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        margin: var(--sp-2) 0 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--accent);
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        border-radius: var(--r-sm);
+      }
+
+      .section-toggle:hover {
+        text-decoration: underline;
+      }
+
+      .section-title .section-toggle {
+        min-height: 36px;
+        margin: 0 -4px;
+        padding: 0 4px;
+        color: var(--ink);
+        font-size: 15.5px;
+      }
+
+      .section-title .section-toggle:hover {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
       .category-heading {
         display: flex;
         align-items: baseline;
@@ -2430,10 +2468,18 @@
             html += incomplete.length
               ? `<div class="habit-list">${incomplete.map(h => habitCard(h)).join('')}</div>`
               : `<div class="panel"><strong>✨ You’re all caught up.</strong><p class="small-text">${s.applicable.length ? 'You completed every habit scheduled for today. Take a moment to celebrate.' : 'No habits are scheduled for today.'}</p></div>`;
-            if (done.length)
-              html += `<div class="section-title"><h3>Completed</h3><span>${done.length}</span></div><div class="habit-list">${done.map(h => habitCard(h)).join('')}</div>`;
-            if (notToday.length)
-              html += `<div class="section-title"><h3>Not scheduled today</h3><span>${notToday.length}</span></div><div class="habit-list">${notToday.map(h => habitCard(h)).join('')}</div>`;
+            if (done.length) {
+              const shown = todaySections.completedExpanded
+                ? done
+                : done.slice(0, COMPLETED_PREVIEW);
+              html += `<div class="section-title"><h3>Completed</h3><span>${done.length}</span></div><div class="habit-list" id="completedList">${shown.map(h => habitCard(h)).join('')}</div>`;
+              if (done.length > COMPLETED_PREVIEW)
+                html += `<button type="button" class="section-toggle" data-action="toggle-completed" aria-expanded="${todaySections.completedExpanded}" aria-controls="completedList">${todaySections.completedExpanded ? 'Show fewer' : `Show all ${done.length}`}</button>`;
+            }
+            if (notToday.length) {
+              const expanded = todaySections.notTodayExpanded;
+              html += `<div class="section-title"><h3><button type="button" class="section-toggle" data-action="toggle-not-today" aria-expanded="${expanded}" aria-controls="notScheduledList">${expanded ? '▾' : '▸'} Not scheduled today</button></h3><span>${notToday.length}</span></div><div class="habit-list" id="notScheduledList" ${expanded ? '' : 'hidden'}>${notToday.map(h => habitCard(h)).join('')}</div>`;
+            }
           }
           html += renderTasks();
           html += `<aside class="note"><h3>Gentle reminder</h3><p>${esc(recoveryMessage())}</p><p class="small-text">Rest days are part of a routine, too. Your best streak and lifetime completions are never taken away.</p></aside>`;
@@ -3098,6 +3144,9 @@
           clearTimeout(countHoldTimer);
           countHoldTimer = null;
         }
+        // Today-section disclosure: session-only UI state, never persisted.
+        const COMPLETED_PREVIEW = 3;
+        let todaySections = { completedExpanded: false, notTodayExpanded: false };
         async function exportData() {
           const data = JSON.stringify(
             { ...state, app: 'Evrida', exportedAt: new Date().toISOString() },
@@ -3303,6 +3352,16 @@
               return;
             lastCountTapAt = performance.now();
             if (c < g) changeCount(h, today(), c + 1); // at target: no-op
+            return;
+          }
+          if (action === 'toggle-completed') {
+            todaySections.completedExpanded = !todaySections.completedExpanded;
+            render();
+            return;
+          }
+          if (action === 'toggle-not-today') {
+            todaySections.notTodayExpanded = !todaySections.notTodayExpanded;
+            render();
             return;
           }
           if (action === 'history' && h) {

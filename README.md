@@ -78,6 +78,7 @@ This README documents the current single-file implementation. It does not imply 
 
 - Shows habits applicable to the current date.
 - Each habit has a single counter button showing the current count against the target (for example `3/5`): tapping it adds one, and pressing and holding it subtracts one.
+- Uses progressive disclosure when there are many habits: "Up next" always shows every pending habit, "Completed" previews the first three cards with a "Show all"/"Show fewer" toggle, and "Not scheduled today" collapses by default to a single row that still shows its count. The toggles are real buttons with `aria-expanded`, and the disclosure state lasts for the session only.
 - Displays progress toward the daily target.
 - Includes a daily inspirational quote, with the ability to save or unsave it.
 - Provides daily intentions: a lightweight checklist separate from habits.
@@ -537,6 +538,7 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Invalid targets, names, categories, start dates, and empty schedules are rejected.
 - [ ] Daily progress supports partial counts and target completion.
 - [ ] The habit counter adds one on tap, ignores rapid double-taps, stops at the target, subtracts one on press-and-hold (and on Shift+Enter), and each change shows the Undo toast.
+- [ ] With many habits, Completed previews three cards followed by a working Show all/Show fewer toggle, "Not scheduled today" starts collapsed with its count visible, and both toggles are keyboard-operable buttons exposing `aria-expanded`.
 - [ ] Future dates and pre-start dates cannot be logged.
 - [ ] Scheduled weekdays are respected by history, streaks, and completion rates.
 - [ ] History and gallery show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
