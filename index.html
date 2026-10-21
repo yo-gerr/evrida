@@ -236,21 +236,24 @@
         min-width: 0;
       }
 
+      /* Header mark: the same rect/E/dot geometry as the favicon data-URI and
+         icons/icon.svg, but wired to theme tokens so it inverts in dark mode.
+         Colors are the only difference from those two copies; keep the three
+         in sync when the mark changes. */
       .logo {
         width: 42px;
         height: 42px;
         border-radius: var(--r-md);
-        background: var(--accent);
-        color: var(--accentInk);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 900;
-        font-size: 19px;
-        letter-spacing: -1.5px;
+        overflow: hidden;
         float: left;
         margin-right: var(--sp-3);
         user-select: none;
+      }
+
+      .logo svg {
+        display: block;
+        width: 100%;
+        height: 100%;
       }
 
       .brand h1 {
@@ -1785,7 +1788,11 @@
       <header>
         <div class="brand">
           <div class="logo" aria-hidden="true">
-            e<span style="color: #d8b66a">·</span>
+            <svg viewBox="0 0 64 64" focusable="false">
+              <rect width="64" height="64" rx="17" fill="var(--accent)" />
+              <path d="M18 17h28v7H26v6h17v7H26v6h20v7H18z" fill="var(--accentInk)" />
+              <circle cx="49" cy="14" r="5" fill="var(--gold)" />
+            </svg>
           </div>
           <div>
             <h1>Evrida</h1>

@@ -561,6 +561,7 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Scheduled weekdays are respected by history, streaks, and completion rates.
 - [ ] History and the Insights mosaic show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
 - [ ] The Insights Trends / Mosaic switcher works, shows the correct view, and marks the active view for assistive technology.
+- [ ] The header brand mark renders as the rounded-square `E` with its gold dot in both themes, is not announced twice by a screen reader, and does not shift the header layout.
 - [ ] Mosaic squares stay legible, do not overflow their cards, and stack to one column on narrow screens.
 - [ ] The mobile bottom bar shows five items, none of their labels clip or wrap at a 360px viewport, and the active item is indicated.
 - [ ] Insight period and category filters work.
@@ -618,8 +619,8 @@ When changing the UI:
 - **Name:** Evrida
 - **Tagline:** Every day, a little more you.
 - **Visual direction:** calm, supportive, clean, and personal; progress should feel encouraging rather than competitive. The interface follows an editorial wellness-journal direction: warm ivory surfaces, forest-green accents, rounded cards, restrained shadows, clear hierarchy, and serif type reserved for editorial content.
-- **Brand mark:** forest-green rounded square with a white `E` and a gold accent dot.
-- **App icon:** the same brand mark shipped in `icons/` as SVG and PNG (180/192/512, plus a maskable variant) for installable-app use. Regenerate only with `node tools/make-icons.js`; the geometry must stay in sync with the favicon in `index.html`.
+- **Brand mark:** forest-green rounded square with a white block `E` and a gold accent dot. It appears in three places with identical geometry — the inline header mark in `index.html`, the data-URI favicon, and `icons/icon.svg`. The header mark uses theme tokens (`--accent`, `--accentInk`, `--gold`) so it inverts in dark mode; the favicon and icon files keep fixed colors. Any mark change must update all three.
+- **App icon:** the same brand mark shipped in `icons/` as SVG and PNG (180/192/512, plus a maskable variant) for installable-app use. Regenerate only with `node tools/make-icons.js`; the geometry must stay in sync with the favicon and the inline header mark in `index.html`.
 
 ### Light theme tokens
 

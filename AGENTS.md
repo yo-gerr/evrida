@@ -178,6 +178,8 @@ Current CSS tokens:
 
 The focus indicator uses `#496B50` in light and `#C1D5B8` in dark. The source CSS in `index.html` is the implementation source of truth; update this file and README together if the tokens change.
 
+The brand mark — a rounded square with a block `E` and a gold dot — exists in three copies: the inline `<svg>` in the header (`.logo`), the data-URI favicon in `<head>`, and `icons/icon.svg` (which also drives the generated PNGs). Geometry must stay identical across all three. Only the header copy is theme-aware; it reads `var(--accent)`, `var(--accentInk)`, and `var(--gold)` so it inverts in dark mode, while the favicon and icon files keep fixed colors. Never reference `icons/icon.svg` from the document with `<img>` — that hard-codes the light-theme green and breaks the header when `index.html` is opened without its sibling `icons/` folder.
+
 Habit colors come from a fixed nature palette (`COLORS` in `index.html`): `#496B50`, `#C8795A`, `#788A9A`, `#A67C29`, `#5F8A6E`, `#3F6D7A`, `#B4707C`, `#6E7F4E`. Per-habit text and fill colors are derived with CSS `color-mix()`, so the app requires a browser from the 2023 generation or newer; there is no JavaScript color fallback. Because `normalize()` validates `color` against the palette, changing the palette reassigns non-matching stored colors by habit position — presentation only, with no history loss.
 
 - Preserve system/light/dark theme behavior.
