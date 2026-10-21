@@ -124,7 +124,14 @@ Avoid presenting rest days or unscheduled days as failures.
 
 ### 4. Insights
 
-Insights summarize progress over a selectable time period and category. Depending on the selected filters, the view includes completion rates, scheduled/completed day counts, habit-level comparisons, and streak information.
+Insights has two views, selected with a Trends / Mosaic switcher under the page title:
+
+- **Trends** summarizes progress over a selectable time period and category. Depending on the selected filters, the view includes completion rates, scheduled/completed day counts, habit-level comparisons, and streak information.
+- **Mosaic** creates a 13-week (91-day) visual mosaic for each habit: one small square per day. It distinguishes completed, partial, scheduled-with-no-completion, unscheduled/rest, pre-start, and future dates, with the same legend used by History. The mosaic is generated from habit history; it is not a separate source of completion truth.
+
+Mosaic squares scale with their card. On narrow screens the mosaic cards stack into a single column so the mosaic stays legible rather than squeezing thirteen columns into a small card.
+
+The selected view is session-only and is not persisted or included in backups. Moving to Insights from the navigation resets to Trends so the page never opens on a stale view.
 
 These values are descriptive aids, not grades. When changing calculations, account for the habit's start date, scheduled weekdays, partial completions, and the current date.
 
@@ -142,11 +149,15 @@ Users can select an entry date, search saved entries, reopen an entry, clear an 
 
 Journal content is personal information. The interface must continue to explain that local browser storage is not encrypted by default and can be read by someone with access to the same browser profile or device.
 
-### 6. Gallery
+### 6. Navigation
 
-Gallery creates a 13-week (91-day) visual mosaic for each habit: one small square per day. It distinguishes completed, partial, scheduled-with-no-completion, unscheduled/rest, pre-start, and future dates, with the same legend used by History. The mosaic is generated from habit history; it is not a separate source of completion truth.
+Evrida has six destinations: Today, Habits, History, Insights, Journal, and Settings. They fall into three groups:
 
-Mosaic squares scale with their card. On narrow screens the gallery cards stack into a single column so the mosaic stays legible rather than squeezing thirteen columns into a small card.
+- **Daily loop:** Today, Habits, Journal.
+- **Review:** History, Insights (which contains the Mosaic).
+- **Configuration:** Settings.
+
+The desktop top navigation lists all six. The mobile bottom bar lists the five highest-frequency destinations — Today, Habits, Insights, Journal, and Settings — so each label keeps enough width to read without clipping on a narrow phone. History drops off the mobile bar and stays reachable from every habit card's History button, which opens the full all-habits timeline. The tightened bar is a presentation-only choice: no destination is removed, and no state, backup, or schema behavior depends on the navigation structure.
 
 ### 7. Appearance
 
@@ -287,7 +298,7 @@ Tap a habit's counter to add one toward its daily target; the counter shows the 
 
 ### Review trends
 
-Use History to inspect individual dates, Insights to compare completion patterns, and Gallery to view the 13-week mosaic. Interpret metrics in context: new habits and intentionally infrequent schedules can have different-looking rates.
+Use History to inspect individual dates, Insights → Trends to compare completion patterns, and Insights → Mosaic to view the 13-week mosaic. Interpret metrics in context: new habits and intentionally infrequent schedules can have different-looking rates.
 
 ### Journal
 
@@ -548,8 +559,10 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] With many habits, Completed previews three cards followed by a working Show all/Show fewer toggle, "Not scheduled today" starts collapsed with its count visible, and both toggles are keyboard-operable buttons exposing `aria-expanded`.
 - [ ] Future dates and pre-start dates cannot be logged.
 - [ ] Scheduled weekdays are respected by history, streaks, and completion rates.
-- [ ] History and gallery show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
-- [ ] Gallery mosaics stay legible, do not overflow their cards, and stack to one column on narrow screens.
+- [ ] History and the Insights mosaic show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
+- [ ] The Insights Trends / Mosaic switcher works, shows the correct view, and marks the active view for assistive technology.
+- [ ] Mosaic squares stay legible, do not overflow their cards, and stack to one column on narrow screens.
+- [ ] The mobile bottom bar shows five items, none of their labels clip or wrap at a 360px viewport, and the active item is indicated.
 - [ ] Insight period and category filters work.
 - [ ] Journal entries save, reload, search, reopen, and clear correctly.
 - [ ] Mood selection persists.
@@ -581,7 +594,7 @@ A successful syntax or HTML parse check is not equivalent to a successful intera
 
 ## Accessibility and responsive design
 
-The current implementation includes semantic page regions, labels for form fields, focus-visible styling, accessible names for several icon-only controls, live-region toast feedback, native dialogs, and both top and mobile navigation. Heatmap and mosaic day cells carry accessible date labels, state is never communicated by color alone, and controls meet a 44px touch target where they are primary (smaller swatches remain at or above the 24px WCAG 2.5.8 minimum). Motion is limited and respects `prefers-reduced-motion`.
+The current implementation includes semantic page regions, labels for form fields, focus-visible styling, accessible names for several icon-only controls, live-region toast feedback, native dialogs, and both top and mobile navigation (the mobile bar carries the five most frequent destinations, the top navigation all six). Heatmap and mosaic day cells carry accessible date labels, state is never communicated by color alone, and controls meet a 44px touch target where they are primary (smaller swatches remain at or above the 24px WCAG 2.5.8 minimum). Motion is limited and respects `prefers-reduced-motion`.
 
 When changing the UI:
 

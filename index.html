@@ -1048,6 +1048,42 @@
         margin-bottom: 0;
       }
 
+      /* ---------- Insights view switcher ---------- */
+
+      .seg {
+        display: inline-flex;
+        gap: 3px;
+        padding: 3px;
+        border: var(--bw) solid var(--line);
+        border-radius: var(--r-pill);
+        background: var(--soft);
+        margin-bottom: var(--sp-5);
+      }
+
+      .seg button {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 7px 16px;
+        min-height: 36px;
+        border-radius: var(--r-pill);
+        transition:
+          background var(--dur-1) var(--ease),
+          color var(--dur-1) var(--ease);
+      }
+
+      .seg button:hover {
+        color: var(--ink);
+      }
+
+      .seg button.active {
+        background: var(--card);
+        color: var(--ink);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+      }
+
       .bar-row {
         display: grid;
         grid-template-columns: minmax(90px, 1fr) minmax(120px, 2.2fr) 48px;
@@ -1928,14 +1964,19 @@
           '🪥'
         ];
         const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        // [page id, icon, label, keepInMobileBar]. Grouping separates the daily
+        // loop (Today, Habits, Journal) from review (History, Insights) and
+        // configuration (Settings) without burying any destination: the desktop
+        // nav lists all six, while the mobile bar keeps five so labels have room
+        // to breathe. History stays a real destination reachable from the mobile
+        // bar's neighbour pages and from each habit card's History button.
         const NAV = [
-          ['today', '◷', 'Today'],
-          ['habits', '☷', 'Habits'],
-          ['history', '▦', 'History'],
-          ['insights', '↗', 'Insights'],
-          ['journal', '✎', 'Journal'],
-          ['gallery', '▧', 'Gallery'],
-          ['settings', '⚙', 'Settings']
+          ['today', '◷', 'Today', true],
+          ['habits', '☷', 'Habits', true],
+          ['history', '▦', 'History', false],
+          ['insights', '↗', 'Insights', true],
+          ['journal', '✎', 'Journal', true],
+          ['settings', '⚙', 'Settings', true]
         ];
         const QUOTES = [
           {
@@ -2009,6 +2050,9 @@
             settings: { theme: 'system' }
           },
           activePage = 'today',
+          // Insights owns both the numeric trends and the 13-week mosaic.
+          // Session-only view state; never persisted.
+          insightView = 'trends',
           editingId = null,
           insightPeriod = 30,
           insightCategory = 'All categories',
@@ -2365,18 +2409,24 @@
             rate: pct(done, applicable.length)
           };
         }
-        function navMarkup() {
-          return NAV.map(
-            ([id, ico, label]) =>
-              `<button data-page="${id}" class="${activePage === id ? 'active' : ''}" ${activePage === id ? 'aria-current="page"' : ''}><span>${ico}</span>${label}</button>`
-          ).join('');
+        function navMarkup(mobile = false) {
+          return NAV.filter(item => !mobile || item[3])
+            .map(
+              ([id, ico, label]) =>
+                `<button data-page="${id}" class="${activePage === id ? 'active' : ''}" ${activePage === id ? 'aria-current="page"' : ''}><span>${ico}</span>${label}</button>`
+            )
+            .join('');
         }
         function renderNav() {
           $('#topNav').innerHTML = navMarkup();
-          $('#bottomNav').innerHTML = navMarkup();
+          $('#bottomNav').innerHTML = navMarkup(true);
           document.querySelectorAll('[data-page]').forEach(
             b =>
               (b.onclick = () => {
+                // Deep links can name an Insights view (for example the mosaic
+                // formerly known as Gallery). Anything else resets to trends
+                // so the page never opens on a stale view.
+                insightView = b.dataset.insightsView || 'trends';
                 activePage = b.dataset.page;
                 render();
               })
@@ -2648,6 +2698,31 @@
           };
         }
         function renderInsights() {
+          // Two views share one page head so the switcher reads as part of the
+          // page rather than as nested tabs. Both renderers below return body
+          // markup only; the mosaic used to be its own Gallery page.
+          const switcher = `<div class="seg" role="tablist" aria-label="Insights view"><button data-insight-view="trends" role="tab" aria-selected="${insightView === 'trends'}" class="${insightView === 'trends' ? 'active' : ''}">Trends</button><button data-insight-view="mosaic" role="tab" aria-selected="${insightView === 'mosaic'}" class="${insightView === 'mosaic' ? 'active' : ''}">Mosaic</button></div>`;
+          if (insightView === 'mosaic')
+            return (
+              pageHead(
+                'Milestones',
+                'Mosaic',
+                'Your last 13 weeks, turned into a little pixel mosaic.'
+              ) +
+              switcher +
+              renderMosaic()
+            );
+          return (
+            pageHead(
+              'Patterns, not pressure',
+              'Insights',
+              'Understand your consistency and discover which routines are sticking.'
+            ) +
+            switcher +
+            renderTrends()
+          );
+        }
+        function renderTrends() {
           const allCategories = [
             'All categories',
             ...new Set(
@@ -2657,16 +2732,9 @@
             )
           ];
           if (!state.habits.length)
-            return (
-              pageHead(
-                'Patterns, not pressure',
-                'Insights',
-                'Understand your consistency and discover which routines are sticking.'
-              ) +
-              empty(
-                'Insights grow with your habits',
-                'Add a habit and log a few days. Your trends and category comparisons will appear here.'
-              )
+            return empty(
+              'Insights grow with your habits',
+              'Add a habit and log a few days. Your trends and category comparisons will appear here.'
             );
           if (!allCategories.includes(insightCategory))
             insightCategory = 'All categories';
@@ -2684,11 +2752,7 @@
             rate = pct(totalCompleted, totalScheduled);
           const currentBest = Math.max(0, ...habits.map(currentStreak));
           const recovery = recoveryStats();
-          let html = pageHead(
-            'Patterns, not pressure',
-            'Insights',
-            'See what is working, one category and one week at a time.'
-          );
+          let html = '';
           html += `<div class="insight-controls"><div class="field"><label for="insightPeriod">Time period</label><select id="insightPeriod"><option value="7" ${insightPeriod === 7 ? 'selected' : ''}>Last 7 days</option><option value="30" ${insightPeriod === 30 ? 'selected' : ''}>Last 30 days</option><option value="90" ${insightPeriod === 90 ? 'selected' : ''}>Last 90 days</option></select></div><div class="field"><label for="insightCategory">Category</label><select id="insightCategory">${allCategories.map(c => `<option value="${esc(c)}" ${c === insightCategory ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div></div>`;
           html += `<div class="stats">${statCard(`${rate}%`, 'Scheduled days completed')}${statCard(`${totalCompleted}/${totalScheduled}`, 'Successful scheduled days')}${statCard(currentBest, 'Longest current streak')}</div><div class="note"><h3>Gentle recovery</h3><p class="muted">${recovery.resumes} ${recovery.resumes === 1 ? 'return after a missed scheduled day' : 'returns after missed scheduled days'} recorded across your habits. Best streaks and lifetime completions remain intact.</p><p class="small-text">A return means a habit was completed on a scheduled day after a previous scheduled day was missed. Planned rest days are ignored.</p></div>`;
           html += `<div class="panel"><h3>Category overview</h3><p class="small-text">Completion rate is based on scheduled days within the selected period, starting no earlier than each habit’s start date. Future and unscheduled days are excluded.</p>`;
@@ -2795,22 +2859,14 @@
           html += `<div class="panel"><h3>Habit snapshot · ${fmt(journalDate)}</h3><p class="muted small-text">An optional glance at how your habits and reflections fit together. This does not change any habit status.</p>${dayHabits.length ? `<p><strong>${dayDone.length} of ${dayHabits.length}</strong> scheduled habits completed</p><p class="small-text">${dayHabits.map(h => `${completed(h, journalDate) ? '✓' : '○'} ${esc(h.name)}`).join(' · ')}</p>` : `<p class="muted small-text">No habits scheduled for this date.</p>`}</div><div class="privacy-note">🔒 Journal entries stay in this browser and are included in your JSON backup. Browser local storage is <strong>not encrypted by default</strong>; anyone with access to this browser profile may be able to read it. Browser cleanup can erase it, so export backups regularly.</div>`;
           return html;
         }
-        function renderGallery() {
-          let html = pageHead(
-            'Milestones',
-            'Gallery',
-            'Your last 13 weeks, turned into a little pixel mosaic.'
-          );
+        function renderMosaic() {
           if (!state.habits.length)
-            return (
-              html +
-              empty(
-                'Your gallery starts with a habit',
-                'Create a habit and your progress will gradually fill in a colorful 13-week mosaic.'
-              )
+            return empty(
+              'Your mosaic starts with a habit',
+              'Create a habit and your progress will gradually fill in a colorful 13-week mosaic.'
             );
           const start = shift(today(), -90);
-          html += `<div class="panel"><h3>How to read your mosaics</h3><p class="small-text">Each square represents a day.</p><div class="legend"><span><i class="dot full"></i>Goal reached</span><span><i class="dot partial"></i>Partial progress</span><span><i class="dot"></i>Scheduled, no completion</span><span><i class="dot hollow"></i>Rest or unscheduled day</span><span><i class="dot faint"></i>Future</span><span><i class="dot pre"></i>Before the habit started</span></div><p class="small-text">Rest days and unscheduled days are not treated as failures.</p></div><div class="gallery-grid">${state.habits
+          let html = `<div class="panel"><h3>How to read your mosaics</h3><p class="small-text">Each square represents a day.</p><div class="legend"><span><i class="dot full"></i>Goal reached</span><span><i class="dot partial"></i>Partial progress</span><span><i class="dot"></i>Scheduled, no completion</span><span><i class="dot hollow"></i>Rest or unscheduled day</span><span><i class="dot faint"></i>Future</span><span><i class="dot pre"></i>Before the habit started</span></div><p class="small-text">Rest days and unscheduled days are not treated as failures.</p></div><div class="gallery-grid">${state.habits
             .map(h => {
               let good = 0,
                 total = 0,
@@ -2916,9 +2972,7 @@
                     ? renderInsights()
                     : activePage === 'journal'
                       ? renderJournal()
-                      : activePage === 'gallery'
-                        ? renderGallery()
-                        : renderSettings();
+                      : renderSettings();
           root
             .querySelectorAll('[data-action]')
             .forEach(b => b.addEventListener('click', handleAction));
@@ -2933,7 +2987,14 @@
           });
           root.querySelectorAll('[data-page]').forEach(b =>
             b.addEventListener('click', () => {
+              insightView = b.dataset.insightsView || 'trends';
               activePage = b.dataset.page;
+              render();
+            })
+          );
+          root.querySelectorAll('[data-insight-view]').forEach(b =>
+            b.addEventListener('click', () => {
+              insightView = b.dataset.insightView;
               render();
             })
           );
@@ -2943,7 +3004,7 @@
               save();
               render();
             };
-          if (activePage === 'insights') {
+          if (activePage === 'insights' && insightView === 'trends') {
             $('#insightPeriod').onchange = e => {
               insightPeriod = Number(e.target.value);
               render();

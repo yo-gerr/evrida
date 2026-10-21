@@ -205,12 +205,15 @@ The current app contains these areas:
 - **Today:** current-day habit progress, daily quote, daily intentions.
 - **Habits:** create, edit, delete, schedule, target, category, emoji, color.
 - **History:** historical completion and date inspection.
-- **Insights:** time-period/category summaries and habit comparisons.
+- **Insights:** a Trends / Mosaic view switcher; trends are time-period/category summaries and habit comparisons, and the mosaic is the 91-day/13-week progress view (formerly its own Gallery page).
 - **Journal:** dated reflections, mood, search, saved quote access, habit snapshot.
-- **Gallery:** 91-day/13-week progress mosaics.
 - **Settings:** system/light/dark theme, export/import, local-data deletion, privacy notes.
 
-When changing one area, check connected calculations and UI. For example, changing habit schedules may affect Today, History, Insights, streaks, and Gallery.
+The navigation groups six destinations into a daily loop (Today, Habits, Journal), review (History, Insights), and configuration (Settings). The desktop top navigation lists all six; the mobile bottom bar lists the five highest-frequency ones (Today, Habits, Insights, Journal, Settings). History drops off the mobile bar to keep label widths readable and remains reachable from every habit card's History button, which renders the full all-habits timeline. Keep both lists in sync when adding or renaming a destination, and treat the mobile count as a maximum rather than a target — seven equal-weight tabs is what made labels clip.
+
+When changing one area, check connected calculations and UI. For example, changing habit schedules may affect Today, History, Insights, streaks, and the mosaic.
+
+The Insights view switcher is session-only presentation state. Do not persist it and do not add it to backups; leaving and returning to Insights resets it to Trends.
 
 Daily intentions are separate from habits. Journal entries are optional and must not affect habit completion.
 
