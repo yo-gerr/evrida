@@ -121,6 +121,41 @@ test('normalize whitelists icons and colors, with deterministic fallbacks', () =
   );
 });
 
+// EMOJIS is the validation whitelist for a persisted `icon`, so it may only
+// grow by appending. These tests guard against a future edit removing or
+// reordering an entry, which would silently reset existing habits' icons.
+const ORIGINAL_EMOJIS = [
+  '📚', '🏃', '💧', '🧘', '💪', '🛏️', '🥗', '✍️',
+  '🎸', '💤', '🧹', '🌱', '🚶', '🧠', '🎨', '🪥',
+];
+
+test('the original icon set is still present, in its original order', () => {
+  assert.deepEqual(EMOJIS.slice(0, ORIGINAL_EMOJIS.length), ORIGINAL_EMOJIS);
+});
+
+test('the icon whitelist has no duplicates and no blank entries', () => {
+  assert.equal(new Set(EMOJIS).size, EMOJIS.length);
+  assert.ok(EMOJIS.every(e => typeof e === 'string' && e.trim().length > 0));
+});
+
+test('every icon in the whitelist survives normalization unchanged', () => {
+  for (const icon of EMOJIS) {
+    assert.equal(normalize({ habits: [baseHabit({ icon })] }).habits[0].icon, icon);
+  }
+});
+
+test('newly added icons are accepted and retained', () => {
+  // Chess pawn and controller represent the play/games group.
+  for (const icon of ['♟️', '🎮', '🧩', '💰']) {
+    assert.ok(EMOJIS.includes(icon), `${icon} should be in the whitelist`);
+    assert.equal(normalize({ habits: [baseHabit({ icon })] }).habits[0].icon, icon);
+  }
+});
+
+test('an icon outside the whitelist still falls back deterministically', () => {
+  assert.equal(normalize({ habits: [baseHabit({ icon: '\u{1F9A4}' })] }).habits[0].icon, EMOJIS[0]);
+});
+
 test('normalize generates ids when missing and preserves valid ones', () => {
   const withId = normalize({ habits: [baseHabit({ id: 'custom-id' })] }).habits[0];
   assert.equal(withId.id, 'custom-id');

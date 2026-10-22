@@ -97,7 +97,7 @@ Each habit can include:
 - Start date, not later than today.
 - Category, including a custom category.
 - Scheduled weekdays.
-- Emoji icon.
+- Emoji icon, chosen from a fixed set of 54 icons covering everyday health, play, learning, sport, rest, work, home, craft, and nature. The icon list is also the validation whitelist for stored data, so it only grows by appending new icons.
 - Color.
 - Date-indexed completion counts.
 
@@ -417,7 +417,7 @@ Exports additionally include `app` and `exportedAt` metadata.
 | `goal` | Daily target from 1 to 99 |
 | `start` | Start date (`YYYY-MM-DD`) |
 | `days` | Scheduled weekdays, represented as integers `0`–`6` (Sunday–Saturday) |
-| `icon` | Emoji selected for the habit |
+| `icon` | Emoji selected from the fixed built-in icon list; a value outside that list is reset to the first icon during normalization, so the list only ever grows by appending |
 | `color` | Selected color from the app palette; values outside the palette are reassigned by habit position during normalization |
 | `done` | Object mapping dates to recorded counts |
 | `when` | Optional implementation intention ("when") — free text up to 60 characters, e.g. `after lunch` or `after I brush my teeth`; omitted when empty |
@@ -524,7 +524,7 @@ The application's pure logic has an automated test suite that runs in Node.js wi
 - **Location:** `tests/`
 - **Runner:** Node's built-in `node:test` module (Node.js 20 or newer; developed against Node 24). There are no npm packages, no `package.json`, and no build step.
 - **Command:** run `node --test` from the project directory.
-- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; the implementation-intention sentence builder; daily-intention carry-forward rules; `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input, the optional when/where fields, legacy cue migration, and backward compatibility with version 6 and 7 backups; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
+- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; the implementation-intention sentence builder; the icon whitelist (including that the original icons remain present in order, that every listed icon round-trips through normalization, and that unknown icons fall back deterministically); daily-intention carry-forward rules; `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input, the optional when/where fields, legacy cue migration, and backward compatibility with version 6 and 7 backups; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
 - **How it works:** `tests/helpers/load-app.js` reads `index.html`, extracts the inline script, and appends a test-only export hook to the extracted text before evaluating it with minimal DOM stubs. The application file itself is not modified for testability.
 - **Scope:** pure logic and static asset checks only. Rendering, dialogs, undo toasts, file import/export flows, themes, cross-tab synchronization, service-worker caching, installation, and offline behavior are not covered and remain manual checks.
 

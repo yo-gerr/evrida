@@ -1429,12 +1429,24 @@
         gap: var(--sp-3);
       }
 
+      /* Bounded swatch tray. The emoji list is deliberately larger than a
+         couple of rows, so that grid scrolls instead of growing the dialog: on
+         a phone this is the difference between a usable picker and a wall of
+         buttons. */
       .weekday-pick,
       .emoji-pick,
       .color-pick {
         display: flex;
         flex-wrap: wrap;
+        align-content: flex-start;
         gap: 7px;
+      }
+
+      .emoji-pick {
+        max-height: 188px;
+        overflow-y: auto;
+        padding-right: 2px;
+        scrollbar-width: thin;
       }
 
       .weekday-pick button {
@@ -1748,6 +1760,12 @@
           height: 44px;
         }
 
+        /* 44px buttons need a taller cap to show whole rows: 4 rows =
+           4*44 + 3*7 = 197px. Keeps the tray bounded but not cramped. */
+        .emoji-pick {
+          max-height: 200px;
+        }
+
         .color-pick button {
           width: 36px;
           height: 36px;
@@ -1961,7 +1979,13 @@
           '#B4707C',
           '#6E7F4E'
         ];
+        // Validation whitelist for a habit's persisted `icon`, not just a
+        // picker list: normalize() resets any icon not found here to EMOJIS[0].
+        // This array may only GROW BY APPENDING. Removing or reordering an
+        // entry would silently rewrite the stored icons of existing habits.
+        // The first 16 are the original set; keep them first and unchanged.
         const EMOJIS = [
+          // Original set — everyday health, focus, and self-care.
           '📚',
           '🏃',
           '💧',
@@ -1977,7 +2001,54 @@
           '🚶',
           '🧠',
           '🎨',
-          '🪥'
+          '🪥',
+          // Play and games.
+          '♟️',
+          '🎮',
+          '🎲',
+          '🧩',
+          '🎯',
+          // Learning and language.
+          '🗣️',
+          '🔤',
+          '🧮',
+          '✈️',
+          // Sport and movement.
+          '🚴',
+          '🏊',
+          '⚽',
+          '🧗',
+          // Rest and wellbeing.
+          '🛁',
+          '☀️',
+          '🌙',
+          '🧴',
+          // Work and admin.
+          '💼',
+          '🖥️',
+          '✅',
+          '🗓️',
+          '💰',
+          '🧾',
+          // Home and kitchen.
+          '🍳',
+          '🧺',
+          '🧽',
+          // Making and craft.
+          '📷',
+          '🎹',
+          '🧶',
+          '🪚',
+          // Nature, animals, and people.
+          '🌳',
+          '🐾',
+          '👥',
+          '🙏',
+          // A few remaining common ones.
+          '🕯️',
+          '📝',
+          '🚭',
+          '🦷'
         ];
         const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         // [page id, icon, label, keepInMobileBar]. Grouping separates the daily

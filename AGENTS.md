@@ -114,6 +114,7 @@ User-controlled content includes habit names, custom categories, journal text, t
 - Do not create event handlers by embedding user-provided text into inline JavaScript.
 - Preserve field length limits and keep documentation synchronized with them.
 - Do not log journal content or other personal data to the console.
+- A habit's `icon` is validated against the fixed `EMOJIS` whitelist in `index.html`: `normalize()` resets any value not found there to `EMOJIS[0]`. Treat that array as persisted-data contract, not just a picker list — it may only grow by appending. Removing or reordering an entry silently rewrites the stored icons of existing habits, so keep the original entries first and unchanged and extend `tests/normalize.test.js` when the list grows.
 
 ## 7. Privacy and product language
 
