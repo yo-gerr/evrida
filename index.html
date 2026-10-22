@@ -471,6 +471,30 @@
         font-weight: 500;
       }
 
+      /* The category disclosure reuses .section-toggle so its focus ring and
+         keyboard behavior match the Today sections, but it inherits this
+         heading's editorial typography rather than the section-title sizing. */
+      .category-heading .section-toggle {
+        min-height: 36px;
+        margin: 0 -4px;
+        padding: 0 4px;
+        color: var(--ink);
+        font-family: inherit;
+        font-size: inherit;
+        font-weight: inherit;
+        letter-spacing: inherit;
+      }
+
+      .category-heading .section-toggle:hover {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .category-heading .section-toggle span {
+        font-family: var(--font-ui);
+        font-size: 12px;
+      }
+
       .panel {
         background: var(--card);
         border: var(--bw) solid var(--line);
@@ -2703,11 +2727,35 @@
             if (!groups.has(c)) groups.set(c, []);
             groups.get(c).push(h);
           }
-          for (const [category, habits] of [...groups.entries()].sort((a, b) =>
+          // With a long routine the page becomes a wall of cards, so each
+          // category is a disclosure in the same shape as the Today sections.
+          // The threshold keeps small routines fully expanded: collapsing three
+          // habits would only add clicks.
+          const collapsible = state.habits.length >= CATEGORY_COLLAPSE_THRESHOLD;
+          const sorted = [...groups.entries()].sort((a, b) =>
             a[0].localeCompare(b[0])
-          )) {
-            html += `<div class="category-heading"><h3>${esc(category)}</h3><span>${habits.length} ${habits.length === 1 ? 'habit' : 'habits'}</span></div><div class="habit-list">${habits.map(h => habitCard(h, 'all')).join('')}</div>`;
-          }
+          );
+          sorted.forEach(([category, habits], i) => {
+            // Index-based id: category names are user text and cannot be
+            // interpolated into an id safely or predictably.
+            const listId = `categoryList${i}`;
+            const dueToday = habits.filter(h => eligible(h));
+            const doneToday = dueToday.filter(h => completed(h, today()));
+            const expanded =
+              !collapsible || !habitSections.collapsed.has(category);
+            const summary = dueToday.length
+              ? `${doneToday.length} of ${dueToday.length} done today`
+              : `${habits.length} ${habits.length === 1 ? 'habit' : 'habits'}`;
+            const heading = collapsible
+              ? `<button type="button" class="section-toggle" data-action="toggle-category" data-category="${esc(category)}" aria-expanded="${expanded}" aria-controls="${listId}"><span aria-hidden="true">${expanded ? '▾' : '▸'}</span> ${esc(category)}</button>`
+              : esc(category);
+            // The id is only needed as an aria-controls target, so it is only
+            // emitted when the heading is actually a disclosure control.
+            const listAttrs = collapsible
+              ? `id="${listId}" ${expanded ? '' : 'hidden'}`
+              : '';
+            html += `<div class="category-heading"><h3>${heading}</h3><span>${esc(summary)}</span></div><div class="habit-list" ${listAttrs}>${habits.map(h => habitCard(h, 'all')).join('')}</div>`;
+          });
           return html;
         }
         function renderHistory() {
@@ -3364,6 +3412,13 @@
         // Today-section disclosure: session-only UI state, never persisted.
         const COMPLETED_PREVIEW = 3;
         let todaySections = { completedExpanded: false, notTodayExpanded: false };
+        // Habits-page category disclosure. Below this many habits the page stays
+        // fully expanded, so a small routine never gets fiddlier to read. State
+        // is session-only and keyed by category name; it is not persisted and
+        // not included in backups, matching the Today sections and the Insights
+        // view switcher.
+        const CATEGORY_COLLAPSE_THRESHOLD = 8;
+        let habitSections = { collapsed: new Set() };
         async function exportData() {
           const data = JSON.stringify(
             { ...state, app: 'Evrida', exportedAt: new Date().toISOString() },
@@ -3579,6 +3634,20 @@
           if (action === 'toggle-not-today') {
             todaySections.notTodayExpanded = !todaySections.notTodayExpanded;
             render();
+            return;
+          }
+          if (action === 'toggle-category') {
+            const category = b.dataset.category;
+            if (habitSections.collapsed.has(category))
+              habitSections.collapsed.delete(category);
+            else habitSections.collapsed.add(category);
+            render();
+            // The toggle is rebuilt on every render, so restore focus to the
+            // matching control instead of letting focus fall to the document.
+            const again = document.querySelector(
+              `[data-action="toggle-category"][data-category="${CSS.escape(category)}"]`
+            );
+            if (again) again.focus();
             return;
           }
           if (action === 'history' && h) {

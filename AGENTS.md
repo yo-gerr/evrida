@@ -207,7 +207,7 @@ Habit colors come from a fixed nature palette (`COLORS` in `index.html`): `#496B
 The current app contains these areas:
 
 - **Today:** current-day habit progress, daily quote, daily intentions.
-- **Habits:** create, edit, delete, schedule, target, category, emoji, color.
+- **Habits:** create, edit, delete, schedule, target, category, emoji, color. Habits are grouped into alphabetical category sections; with `CATEGORY_COLLAPSE_THRESHOLD` (8) or more habits each section heading becomes a collapsible disclosure that shows a done-today summary while collapsed.
 - **History:** historical completion and date inspection.
 - **Insights:** a Trends / Mosaic view switcher; trends are time-period/category summaries and habit comparisons, and the mosaic is the 91-day/13-week progress view (formerly its own Gallery page).
 - **Journal:** dated reflections, mood, search, saved quote access, habit snapshot.
@@ -217,7 +217,7 @@ The navigation groups six destinations into a daily loop (Today, Habits, Journal
 
 When changing one area, check connected calculations and UI. For example, changing habit schedules may affect Today, History, Insights, streaks, and the mosaic.
 
-The Insights view switcher is session-only presentation state. Do not persist it and do not add it to backups; leaving and returning to Insights resets it to Trends.
+The Insights view switcher is session-only presentation state. Do not persist it and do not add it to backups; leaving and returning to Insights resets it to Trends. The same rule covers the Today section disclosures (`todaySections`) and the Habits category disclosures (`habitSections`).
 
 Daily intentions are separate from habits. Journal entries are optional and must not affect habit completion.
 

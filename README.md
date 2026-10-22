@@ -79,6 +79,7 @@ This README documents the current single-file implementation. It does not imply 
 - Shows habits applicable to the current date.
 - Each habit has a single counter button showing the current count against the target (for example `3/5`): tapping it adds one, and pressing and holding it subtracts one.
 - Uses progressive disclosure when there are many habits: "Up next" always shows every pending habit, "Completed" previews the first three cards with a "Show all"/"Show fewer" toggle, and "Not scheduled today" collapses by default to a single row that still shows its count. The toggles are real buttons with `aria-expanded`, and the disclosure state lasts for the session only.
+- With a long routine (8 habits or more), the Habits page groups habits into collapsible category sections so the page reads as a category index rather than one long wall of cards. Each heading is a disclosure button showing how many of that category's habits are done today, and stays readable when collapsed. Below 8 habits every category stays expanded, because collapsing a short list would only add clicks. The collapsed/expanded state is session-only, matching the Today sections.
 - Displays progress toward the daily target.
 - Includes a daily inspirational quote, with the ability to save or unsave it.
 - Provides daily intentions: a lightweight checklist separate from habits.
@@ -102,6 +103,8 @@ Each habit can include:
 - Date-indexed completion counts.
 
 The current predefined categories are Health & Fitness, Learning, Productivity, Mindfulness, Home, Relationships, Finance, and General. Users can also supply a custom category.
+
+On the Habits page, habits are grouped into category sections sorted alphabetically. With 8 or more habits each section becomes collapsible: the heading is a button that expands or collapses its cards and reports how many of that category's habits are done today. With fewer habits the sections stay expanded. This is presentation-only — it changes neither scheduling nor stored data.
 
 Habit creation requires at least one scheduled weekday. A day before the habit's start date is not eligible for completion logging.
 
@@ -558,8 +561,10 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Daily progress supports partial counts and target completion.
 - [ ] The habit counter adds one on tap, ignores rapid double-taps, stops at the target, subtracts one on press-and-hold (and on Shift+Enter), and each change shows the Undo toast.
 - [ ] With many habits, Completed previews three cards followed by a working Show all/Show fewer toggle, "Not scheduled today" starts collapsed with its count visible, and both toggles are keyboard-operable buttons exposing `aria-expanded`.
+- [ ] With 8 or more habits, Habits-page category headings expand and collapse their cards, keep the done-today summary visible while collapsed, keep keyboard focus on the heading button after toggling, and stay fully expanded below 8 habits.
 - [ ] Future dates and pre-start dates cannot be logged.
 - [ ] Scheduled weekdays are respected by history, streaks, and completion rates.
+- [ ] Every icon in the picker renders as a recognizable glyph rather than a placeholder, the tray scrolls without growing the dialog, and reopening a habit for editing shows its stored icon selected.
 - [ ] History and the Insights mosaic show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
 - [ ] The Insights Trends / Mosaic switcher works, shows the correct view, and marks the active view for assistive technology.
 - [ ] The header brand mark renders as the rounded-square `E` with its gold dot in both themes, is not announced twice by a screen reader, and does not shift the header layout.
