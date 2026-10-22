@@ -663,13 +663,22 @@
       }
 
       /* Implementation intention ("when and where") — personal prose, so it
-         uses the editorial serif like other reflective content. */
-      .habit-cue {
+         uses the editorial serif like other reflective content. The left rule
+         borrows the habit's own --hc (set on .habit-card) so the promise reads
+         as part of that habit's colour, matching how the icon tile and the
+         progress fill already use it.
+         Scoped as `.habit-info .habit-cue` on purpose: `.habit-info p` is
+         (0,1,1), so a bare `.habit-cue` (0,1,0) loses every property both
+         rules declare, and the colour below would be silently ignored. */
+      .habit-info .habit-cue {
         margin: 0 0 5px;
+        padding-left: 9px;
+        border-left: 2px solid color-mix(in srgb, var(--hc) 45%, transparent);
         font-family: var(--font-editorial);
         font-style: italic;
-        font-size: 13px;
-        color: var(--muted);
+        font-size: 13.5px;
+        letter-spacing: 0.01em;
+        color: color-mix(in srgb, var(--ink) 78%, var(--muted));
         overflow-wrap: anywhere;
       }
 

@@ -187,6 +187,7 @@ Habit colors come from a fixed nature palette (`COLORS` in `index.html`): `#496B
 - Use existing CSS variables where possible rather than hard-coding theme-specific colors.
 - Keep the app usable at mobile widths and with browser zoom.
 - Do not use color as the sole signal for completion state.
+- The implementation-intention sentence (`.habit-info .habit-cue`) carries a 2px left rule tinted with the habit's own `--hc`, so the promise reads as part of that habit's color rather than as generic decoration — the same `color-mix()` treatment the icon tile and progress fill use. Its scoped selector matters: `.habit-info p` is `(0,1,1)`, so a bare `.habit-cue` would lose the color and size declarations. Never restyle that fragment by wrapping parts of the sentence in elements; `cueSentence()` returns a plain string and `esc()` is the only escape point.
 
 ## 9. Accessibility requirements
 

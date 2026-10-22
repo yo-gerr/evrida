@@ -553,6 +553,7 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Empty state is clear and allows a habit to be created.
 - [ ] A habit can be created, edited, and deleted.
 - [ ] The optional When?/Where? fields save, compose into an "I will …" sentence in italic under the habit name on Today and Habits cards, drop out of the sentence when cleared on edit, survive a backup round-trip, and render markup-like text as plain text rather than HTML.
+- [ ] The commitment sentence shows its habit-tinted left rule in both themes, reads as part of that habit's color, and does not crowd the progress bar or streak line on habits with a target greater than one.
 - [ ] Invalid targets, names, categories, start dates, and empty schedules are rejected.
 - [ ] Daily progress supports partial counts and target completion.
 - [ ] The habit counter adds one on tap, ignores rapid double-taps, stops at the target, subtracts one on press-and-hold (and on Shift+Enter), and each change shows the Undo toast.
