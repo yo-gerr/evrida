@@ -39,7 +39,7 @@ Evrida brings several lightweight personal-growth tools together in one place:
 
 - Track habits with daily targets and custom schedules.
 - Record partial progress as well as completed goals.
-- Review historical activity using calendars and progress mosaics.
+- Review historical activity using calendars and nurture a habitat of creatures.
 - Explore completion trends and streaks without treating them as a judgment.
 - Write optional journal entries and track a simple mood.
 - Maintain a small list of daily intentions.
@@ -127,12 +127,10 @@ Avoid presenting rest days or unscheduled days as failures.
 
 ### 4. Insights
 
-Insights has two views, selected with a Trends / Mosaic switcher under the page title:
+Insights has two views, selected with a Trends / Habitat switcher under the page title:
 
 - **Trends** summarizes progress over a selectable time period and category. Depending on the selected filters, the view includes completion rates, scheduled/completed day counts, habit-level comparisons, and streak information.
-- **Mosaic** creates a 13-week (91-day) visual mosaic for each habit: one small square per day. It distinguishes completed, partial, scheduled-with-no-completion, unscheduled/rest, pre-start, and future dates, with the same legend used by History. The mosaic is generated from habit history; it is not a separate source of completion truth.
-
-Mosaic squares scale with their card. On narrow screens the mosaic cards stack into a single column so the mosaic stays legible rather than squeezing thirteen columns into a small card.
+- **Habitat** shows a gentle tank where each habit has a creature (fish, snail, or plant). Creatures grow as you complete scheduled days, gain care points over time, and progress through egg, fry, juvenile, and adult stages. Missed or rest days never shrink them; there are no leaderboards.
 
 The selected view is session-only and is not persisted or included in backups. Moving to Insights from the navigation resets to Trends so the page never opens on a stale view.
 
@@ -157,7 +155,7 @@ Journal content is personal information. The interface must continue to explain 
 Evrida has six destinations: Today, Habits, History, Insights, Journal, and Settings. They fall into three groups:
 
 - **Daily loop:** Today, Habits, Journal.
-- **Review:** History, Insights (which contains the Mosaic).
+- **Review:** History, Insights (which contains the Habitat).
 - **Configuration:** Settings.
 
 The desktop top navigation lists all six. The mobile bottom bar lists the five highest-frequency destinations — Today, Habits, Insights, Journal, and Settings — so each label keeps enough width to read without clipping on a narrow phone. History drops off the mobile bar and stays reachable from every habit card's History button, which opens the full all-habits timeline. The tightened bar is a presentation-only choice: no destination is removed, and no state, backup, or schema behavior depends on the navigation structure.

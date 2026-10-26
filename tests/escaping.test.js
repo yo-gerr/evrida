@@ -33,6 +33,6 @@ test('esc neutralizes when/where markup before it reaches a card', () => {
   }).habits[0];
   assert.equal(
     esc(cueSentence(h)),
-    'I will Read &lt;script&gt;alert(1)&lt;/script&gt; at &quot;my&quot; desk',
+    'I will read &lt;script&gt;alert(1)&lt;/script&gt; at &quot;my&quot; desk',
   );
 });

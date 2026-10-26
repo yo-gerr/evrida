@@ -1982,7 +1982,7 @@
         'use strict';
         // Keep the legacy storage key so existing Streakgrid data remains available after rebranding.
         const KEY = 'streakgrid';
-        const VERSION = 8;
+        const VERSION = 9;
         const CATEGORIES = [
           'Health & Fitness',
           'Learning',
@@ -2158,10 +2158,11 @@
             journal: {},
             savedQuotes: [],
             tasks: {},
+            pets: {},
             settings: { theme: 'system' }
           },
           activePage = 'today',
-          // Insights owns both the numeric trends and the 13-week mosaic.
+          // Insights owns trends and the habitat tank.
           // Session-only view state; never persisted.
           insightView = 'trends',
           editingId = null,
@@ -2223,6 +2224,7 @@
             journal: {},
             savedQuotes: [],
             tasks: {},
+            pets: {},
             settings: { theme: 'system' }
           };
         }
@@ -2365,6 +2367,19 @@
           )
             ? raw.settings.theme
             : 'system';
+          const pets = {};
+          if (raw.pets && typeof raw.pets === 'object' && !Array.isArray(raw.pets)) {
+            for (const [hid, p] of Object.entries(raw.pets)) {
+              if (p && typeof p === 'object') {
+                pets[hid] = {
+                  xp: Math.max(0, Math.floor(Number(p.xp) || 0)),
+                  stage: Math.max(0, Math.floor(Number(p.stage) || 0)),
+                  bornAt: typeof p.bornAt === 'string' ? p.bornAt : today(),
+                  species: typeof p.species === 'string' ? p.species : ''
+                };
+              }
+            }
+          }
           return {
             version: VERSION,
             habits,
@@ -2372,6 +2387,7 @@
             journal,
             savedQuotes,
             tasks,
+            pets,
             settings: { theme }
           };
         }
@@ -2528,6 +2544,60 @@
             )
             .join('');
         }
+        const PET_SPECIES = ['fish', 'snail', 'plant'];
+        const PET_STAGES = [
+          { name: 'Egg', xp: 0 },
+          { name: 'Fry', xp: 5 },
+          { name: 'Juvenile', xp: 20 },
+          { name: 'Adult', xp: 50 }
+        ];
+        function ensurePet(hid) {
+          state.pets = state.pets || {};
+          if (!state.pets[hid]) {
+            const s = PET_SPECIES[hid.charCodeAt(hid.length - 1) % PET_SPECIES.length];
+            state.pets[hid] = { xp: 0, stage: 0, bornAt: today(), species: s };
+          }
+          return state.pets[hid];
+        }
+        function addPetXP(hid, amount) {
+          if (amount <= 0) return;
+          const p = ensurePet(hid);
+          p.xp += amount;
+          let newStage = p.stage;
+          for (let i = PET_STAGES.length - 1; i >= 0; i--) {
+            if (p.xp >= PET_STAGES[i].xp) {
+              newStage = i;
+              break;
+            }
+          }
+          if (newStage !== p.stage) {
+            p.stage = newStage;
+            try {
+              notify(`Your creature grew to ${PET_STAGES[p.stage].name.toLowerCase()}!`, false);
+            } catch (e) {}
+          }
+          try {
+            save();
+          } catch (e) {}
+        }
+        function petSvg(species, stage) {
+          if (species === 'plant') {
+            if (stage === 0) return `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="32" r="4" fill="#8b7355"/><line x1="20" y1="28" x2="20" y2="18" stroke="#496b50" stroke-width="3"/><ellipse cx="20" cy="14" rx="6" ry="10" fill="#6aa84f" opacity="0.7"/></svg>`;
+            if (stage === 1) return `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="34" r="4" fill="#8b7355"/><line x1="20" y1="30" x2="20" y2="16" stroke="#496b50" stroke-width="3"/><ellipse cx="16" cy="12" rx="5" ry="9" fill="#6aa84f"/><ellipse cx="24" cy="10" rx="5" ry="9" fill="#7cb342"/></svg>`;
+            if (stage === 2) return `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="34" r="4" fill="#8b7355"/><line x1="20" y1="30" x2="20" y2="14" stroke="#496b50" stroke-width="3"/><ellipse cx="14" cy="10" rx="6" ry="10" fill="#6aa84f"/><ellipse cx="26" cy="8" rx="6" ry="10" fill="#7cb342"/><ellipse cx="20" cy="12" rx="5" ry="9" fill="#8bc34a"/></svg>`;
+            return `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="34" r="4" fill="#8b7355"/><line x1="20" y1="30" x2="20" y2="12" stroke="#496b50" stroke-width="4"/><ellipse cx="12" cy="8" rx="7" ry="12" fill="#6aa84f"/><ellipse cx="28" cy="6" rx="7" ry="12" fill="#7cb342"/><ellipse cx="20" cy="10" rx="6" ry="11" fill="#8bc34a"/><circle cx="18" cy="10" r="1" fill="#fff" opacity="0.6"/></svg>`;
+          }
+          if (species === 'snail') {
+            if (stage === 0) return `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="24" cy="28" rx="10" ry="6" fill="#d7ccc2"/><circle cx="18" cy="28" r="4" fill="#8d6e63"/><circle cx="17" cy="27" r="1" fill="#fff"/></svg>`;
+            if (stage === 1) return `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="22" cy="28" rx="12" ry="7" fill="#d7ccc2"/><path d="M14 28 Q10 22 16 18 Q22 16 28 20 Q30 26 26 28 Z" fill="#a1887f"/><circle cx="16" cy="26" r="3" fill="#8d6e63"/><circle cx="15" cy="25" r="1" fill="#fff"/></svg>`;
+            if (stage === 2) return `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="28" rx="14" ry="8" fill="#d7ccc2"/><path d="M12 28 Q6 20 14 14 Q24 10 32 16 Q34 24 28 28 Z" fill="#a1887f"/><circle cx="14" cy="24" r="4" fill="#8d6e63"/><circle cx="13" cy="23" r="1" fill="#fff"/></svg>`;
+            return `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="18" cy="28" rx="16" ry="9" fill="#d7ccc2"/><path d="M10 28 Q2 18 12 10 Q26 6 34 14 Q36 24 28 28 Z" fill="#a1887f"/><circle cx="12" cy="22" r="5" fill="#8d6e63"/><circle cx="11" cy="21" r="1" fill="#fff"/><circle cx="13" cy="21" r="1" fill="#fff"/></svg>`;
+          }
+          if (stage === 0) return `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="22" rx="10" ry="6" fill="#64b5f6"/><path d="M10 22 L6 20 L10 18 Z" fill="#64b5f6"/><circle cx="24" cy="21" r="1.5" fill="#000"/><circle cx="8" cy="20" r="1" fill="#fff" opacity="0.6"/></svg>`;
+          if (stage === 1) return `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="22" rx="12" ry="7" fill="#42a5f5"/><path d="M8 22 L4 19 L8 16 Z" fill="#42a5f5"/><path d="M28 28 Q30 30 28 32" stroke="#1e88e5" stroke-width="2" fill="none"/><circle cx="25" cy="21" r="2" fill="#000"/><circle cx="26" cy="20" r="0.8" fill="#fff"/></svg>`;
+          if (stage === 2) return `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="22" rx="14" ry="8" fill="#1e88e5"/><path d="M6 22 L2 18 L6 14 Z" fill="#1e88e5"/><path d="M30 30 Q33 33 30 36" stroke="#1565c0" stroke-width="2" fill="none"/><circle cx="27" cy="21" r="2.5" fill="#000"/><circle cx="28" cy="20" r="1" fill="#fff"/></svg>`;
+          return `<svg viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="22" rx="16" ry="9" fill="#1565c0"/><path d="M4 22 L0 17 L4 12 Z" fill="#1565c0"/><path d="M32 32 Q36 36 32 40" stroke="#0d47a1" stroke-width="3" fill="none"/><circle cx="29" cy="20" r="3" fill="#000"/><circle cx="30" cy="19" r="1.2" fill="#fff"/></svg>`;
+        }
         function renderNav() {
           $('#topNav').innerHTML = navMarkup();
           $('#bottomNav').innerHTML = navMarkup(true);
@@ -2555,8 +2625,23 @@
         // Display-only implementation-intention sentence. Assembled from the
         // stored name/when/where parts and never persisted, so edits and
         // missing parts stay correct. Returns '' when there is nothing to say.
+        // Sentence-case the habit name for natural grammar while preserving
+        // proper nouns and all-caps acronyms.
+        function sentenceCaseHabitName(name) {
+          const trimmed = String(name || '').trim();
+          if (!trimmed) return trimmed;
+          // If the name is all caps (acronym) or starts with a digit/symbol, keep as-is
+          if (/^[A-Z0-9][A-Z0-9\s\W]*$/.test(trimmed) && /[A-Z]/.test(trimmed) && !/[a-z]/.test(trimmed)) {
+            return trimmed;
+          }
+          // If it starts with a letter, lowercase the first character
+          if (/^[A-Za-z]/.test(trimmed)) {
+            return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+          }
+          return trimmed;
+        }
         function cueSentence(h) {
-          const name = String(h.name || '').trim();
+          const name = sentenceCaseHabitName(h.name);
           const when = String(h.when || '').trim();
           const where = String(h.where || '').trim();
           if (!name || (!when && !where)) return '';
@@ -2576,7 +2661,10 @@
           const counterHint = done
             ? 'At your target. Press and hold to subtract one.'
             : 'Tap to add one; press and hold to subtract one.';
-          return `<article class="habit-card" style="--hc:${h.color}"><div class="habit-top"><div class="habit-icon" aria-hidden="true">${esc(h.icon)}</div><div class="habit-info"><h3>${esc(h.name)}</h3>${cueSentence(h) ? `<p class="habit-cue">${esc(cueSentence(h))}</p>` : ''}<p>${currentStreak(h)}-day streak · best ${bestStreak(h)}</p><span class="category-tag">${esc(h.category || 'General')}</span></div><button class="count-btn ${done ? 'done' : c ? 'partial' : ''}" data-action="count" data-id="${esc(h.id)}" aria-label="${esc(h.name)}: ${c} of ${g} today. ${counterHint}" title="${stateLabel} · ${c}/${g} — ${done ? 'hold to subtract' : 'tap adds one, hold subtracts'}">${c}/${g}</button></div>${g > 1 ? `<div class="progress-row"><div class="track" role="progressbar" aria-label="${esc(h.name)} progress" aria-valuemin="0" aria-valuemax="${g}" aria-valuenow="${c}"><span style="width:${pctVal}%"></span></div><span class="progress-label">${pctVal}%</span></div>` : ''}<div class="card-actions"><span class="small-text">${h.days.length === 7 ? 'Every day' : h.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(' · ')}</span><span class="grow"></span><button data-action="history" data-id="${esc(h.id)}">History</button><button data-action="edit" data-id="${esc(h.id)}">Edit</button></div></article>`;
+          state.pets = state.pets || {};
+          const p = ensurePet(h.id);
+          const stageName = PET_STAGES[p.stage].name;
+          return `<article class="habit-card" style="--hc:${h.color}"><div class="habit-top"><div class="habit-icon" aria-hidden="true">${esc(h.icon)}</div><div class="habit-info"><h3>${esc(h.name)}</h3>${cueSentence(h) ? `<p class="habit-cue">${esc(cueSentence(h))}</p>` : ''}<p>${currentStreak(h)}-day streak · best ${bestStreak(h)} · ${stageName}</p><span class="category-tag">${esc(h.category || 'General')}</span></div><div style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:44px;height:44px">${petSvg(p.species, p.stage)}</div><button class="count-btn ${done ? 'done' : c ? 'partial' : ''}" data-action="count" data-id="${esc(h.id)}" aria-label="${esc(h.name)}: ${c} of ${g} today. ${counterHint}" title="${stateLabel} · ${c}/${g} — ${done ? 'hold to subtract' : 'tap adds one, hold subtracts'}">${c}/${g}</button></div></div>${g > 1 ? `<div class="progress-row"><div class="track" role="progressbar" aria-label="${esc(h.name)} progress" aria-valuemin="0" aria-valuemax="${g}" aria-valuenow="${c}"><span style="width:${pctVal}%"></span></div><span class="progress-label">${pctVal}%</span></div>` : ''}<div class="card-actions"><span class="small-text">${h.days.length === 7 ? 'Every day' : h.days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(' · ')}</span><span class="grow"></span><button data-action="history" data-id="${esc(h.id)}">History</button><button data-action="edit" data-id="${esc(h.id)}">Edit</button></div></article>`;
         }
         function quoteForToday() {
           const n = Number(today().replaceAll('-', ''));
@@ -2621,21 +2709,30 @@
             saved = state.savedQuotes.includes(idx);
           return `<section class="quote-card" aria-label="Daily inspiration"><p class="quote-text">${esc(q.text)}</p><div class="quote-author">— ${esc(q.author)}</div><div class="card-actions"><button data-action="save-quote" data-quote="${idx}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save quote'}</button><span class="grow"></span><button data-page="journal">Journal &amp; reflections →</button></div></section>`;
         }
-        // Unfinished intentions from yesterday that are not already present in
-        // today's list. Yesterday's entries are never modified by carrying, so
-        // this is the single rule that decides both what the "Bring forward"
-        // button offers and what pressing it copies. Matching on both sides
-        // keeps repeated presses from stacking duplicate intentions.
+        // Unfinished intentions from the last few days that are not already present in
+        // today's list. Past entries are never modified by carrying, so this is the
+        // single rule that decides both what the "Bring forward" button offers and
+        // what pressing it copies. Matching on both sides keeps repeated presses
+        // from stacking duplicate intentions.
         function carryPending() {
-          const yKey = shift(today(), -1);
-          const old = Array.isArray(state.tasks?.[yKey]) ? state.tasks[yKey] : [];
           const have = new Set(
             (Array.isArray(state.tasks?.[today()]) ? state.tasks[today()] : [])
-              .map(t => String(t.text || '').trim())
+              .map(t => String(t.text || '').trim().toLowerCase())
           );
-          return old.filter(
-            t => !t.done && !have.has(String(t.text || '').trim())
-          );
+          const candidates = [];
+          const maxDays = 7;
+          for (let i = 1; i <= maxDays; i++) {
+            const key = shift(today(), -i);
+            if (!Array.isArray(state.tasks?.[key])) continue;
+            for (const t of state.tasks[key]) {
+              const text = String(t.text || '').trim();
+              if (!text) continue;
+              if (t.done) continue;
+              if (have.has(text.toLowerCase())) continue;
+              candidates.push({ ...t, _from: key });
+            }
+          }
+          return candidates;
         }
         function renderTasks() {
           const list = Array.isArray(state.tasks?.[today()])
@@ -2649,9 +2746,19 @@
             : `<div class="empty" style="padding:18px;margin-top:12px"><div class="emoji">☀️</div><strong>No tasks for today</strong><p>Add one small intention if it would help. You can also leave this section empty.</p></div>`;
           html += `<form id="taskForm" class="task-add"><input id="taskInput" type="text" maxlength="120" autocomplete="off" placeholder="Add a small intention…" aria-label="New daily intention"><button class="btn primary" type="submit">Add</button></form>`;
           html += `<p id="taskHint" class="small-text task-hint hidden"></p><span id="taskLimitStatus" class="sr-only" role="status"></span>`;
-          if (carry.length)
-            html += `<div class="card-actions"><span class="small-text grow">${carry.length} unfinished item${carry.length === 1 ? '' : 's'} from yesterday</span><button class="btn small" type="button" data-action="task-carry">Bring forward</button></div>`;
-          html += `<p class="small-text" style="margin:10px 0 0">Unfinished tasks can stay in the past or be brought forward when you choose. They never affect habit streaks or insights.</p></div>`;
+          if (carry.length) {
+            const groups = new Map();
+            for (const c of carry) {
+              if (!groups.has(c._from)) groups.set(c._from, []);
+              groups.get(c._from).push(c);
+            }
+            const parts = [];
+            for (const [d, items] of [...groups.entries()].sort((a, b) => b[0].localeCompare(a[0]))) {
+              parts.push(`${items.length} from ${d}`);
+            }
+            html += `<div class="card-actions"><span class="small-text grow">${carry.length} unfinished item${carry.length === 1 ? '' : 's'} (${parts.join(', ')})</span><button class="btn small" type="button" data-action="task-carry">Bring forward</button></div>`;
+          }
+          html += `<p class="small-text" style="margin:10px 0 0">Unfinished tasks can stay in the past or be brought forward when you choose (up to the last 7 days). They never affect habit streaks or insights.</p></div>`;
           return html;
         }
         function renderToday() {
@@ -2836,16 +2943,16 @@
           // Two views share one page head so the switcher reads as part of the
           // page rather than as nested tabs. Both renderers below return body
           // markup only; the mosaic used to be its own Gallery page.
-          const switcher = `<div class="seg" role="tablist" aria-label="Insights view"><button data-insight-view="trends" role="tab" aria-selected="${insightView === 'trends'}" class="${insightView === 'trends' ? 'active' : ''}">Trends</button><button data-insight-view="mosaic" role="tab" aria-selected="${insightView === 'mosaic'}" class="${insightView === 'mosaic' ? 'active' : ''}">Mosaic</button></div>`;
-          if (insightView === 'mosaic')
+          const switcher = `<div class="seg" role="tablist" aria-label="Insights view"><button data-insight-view="trends" role="tab" aria-selected="${insightView === 'trends'}" class="${insightView === 'trends' ? 'active' : ''}">Trends</button><button data-insight-view="habitat" role="tab" aria-selected="${insightView === 'habitat'}" class="${insightView === 'habitat' ? 'active' : ''}">Habitat</button></div>`;
+          if (insightView === 'habitat')
             return (
               pageHead(
-                'Milestones',
-                'Mosaic',
-                'Your last 13 weeks, turned into a little pixel mosaic.'
+                'Your tank',
+                'Habitat',
+                'Nurture your creatures with each completed day. They grow over time, with no penalty for rest days.'
               ) +
               switcher +
-              renderMosaic()
+              renderHabitat()
             );
           return (
             pageHead(
@@ -2994,46 +3101,28 @@
           html += `<div class="panel"><h3>Habit snapshot · ${fmt(journalDate)}</h3><p class="muted small-text">An optional glance at how your habits and reflections fit together. This does not change any habit status.</p>${dayHabits.length ? `<p><strong>${dayDone.length} of ${dayHabits.length}</strong> scheduled habits completed</p><p class="small-text">${dayHabits.map(h => `${completed(h, journalDate) ? '✓' : '○'} ${esc(h.name)}`).join(' · ')}</p>` : `<p class="muted small-text">No habits scheduled for this date.</p>`}</div><div class="privacy-note">🔒 Journal entries stay in this browser and are included in your JSON backup. Browser local storage is <strong>not encrypted by default</strong>; anyone with access to this browser profile may be able to read it. Browser cleanup can erase it, so export backups regularly.</div>`;
           return html;
         }
-        function renderMosaic() {
+        function renderHabitat() {
           if (!state.habits.length)
             return empty(
-              'Your mosaic starts with a habit',
-              'Create a habit and your progress will gradually fill in a colorful 13-week mosaic.'
+              'Your tank starts with a habit',
+              'Create a habit and your creatures will grow as you complete scheduled days.'
             );
-          const start = shift(today(), -90);
-          let html = `<div class="panel"><h3>How to read your mosaics</h3><p class="small-text">Each square represents a day.</p><div class="legend"><span><i class="dot full"></i>Goal reached</span><span><i class="dot partial"></i>Partial progress</span><span><i class="dot"></i>Scheduled, no completion</span><span><i class="dot hollow"></i>Rest or unscheduled day</span><span><i class="dot faint"></i>Future</span><span><i class="dot pre"></i>Before the habit started</span></div><p class="small-text">Rest days and unscheduled days are not treated as failures.</p></div><div class="gallery-grid">${state.habits
+          state.pets = state.pets || {};
+          let html = `<div class="panel" style="background:linear-gradient(180deg, color-mix(in srgb, #64b5f6 12%, var(--card)) 0%, var(--card) 100%);"><h3>Habitat</h3><p class="small-text">Each creature grows with completed scheduled days. Missed or rest days never shrink them.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--sp-4);margin-top:var(--sp-4)">${state.habits
             .map(h => {
-              let good = 0,
-                total = 0,
-                cells = '';
-              for (let i = 0; i < 91; i++) {
-                const k = shift(start, i),
-                  future = k > today(),
-                  before = k < h.start,
-                  isSched = eligible(h, k),
-                  n = count(h, k),
-                  full = completed(h, k);
-                let cellCls = before
-                  ? 'pre'
-                  : future
-                    ? 'future'
-                    : !isSched
-                      ? 'unscheduled'
-                      : full
-                        ? 'full'
-                        : n > 0
-                          ? 'partial'
-                          : '';
-                if (isSched && !future) {
-                  total++;
-                  if (full) good++;
-                }
-                cells += `<span class="${cellCls}" style="--hc:${h.color}" title="${fmt(k)}"></span>`;
-              }
-              return `<div class="art-card"><div class="art">${cells}</div><h4>${esc(h.icon)} ${esc(h.name)}</h4><p>${pct(good, total)}% of scheduled days completed</p></div>`;
+              const p = ensurePet(h.id);
+              const stage = PET_STAGES[p.stage];
+              const next = PET_STAGES[p.stage + 1];
+              const xp = p.xp;
+              const need = next ? next.xp - xp : 0;
+              const pctXp = next ? Math.min(100, Math.round((100 * (xp - stage.xp)) / Math.max(1, next.xp - stage.xp))) : 100;
+              return `<div class="art-card" style="text-align:center"><div style="width:80px;height:80px;margin:0 auto 10px">${petSvg(p.species, p.stage)}</div><h4>${esc(h.icon)} ${esc(h.name)}</h4><p>${stage.name} · ${xp} care points</p>${next ? `<div class="track" style="margin:8px auto;max-width:160px"><span style="width:${pctXp}%"></span></div><p class="small-text">${need} more to reach ${next.name}</p>` : `<p class="small-text">Fully grown — keep up the gentle care.</p>`}</div>`;
             })
-            .join('')}</div>`;
+            .join('')}</div></div>`;
           return html;
+        }
+        function renderMosaic() {
+          return renderHabitat();
         }
         function renderSettings() {
           return (
@@ -3372,13 +3461,19 @@
             return;
           }
           const prev = count(h, k);
+          const wasDone = completed(h, k);
           if (next <= 0) delete h.done[k];
           else h.done[k] = Math.min(999, next);
+          const nowDone = completed(h, k);
+          if (nowDone && !wasDone && scheduled(h, k)) {
+            addPetXP(h.id, 1);
+          }
           save();
           render();
           snapshotUndo(`${h.name}: ${Math.max(0, next)} recorded.`, () => {
             if (prev) h.done[k] = prev;
             else delete h.done[k];
+            render();
           });
         }
         // Habit counter gestures: tap adds one toward the target, press and
@@ -3508,7 +3603,7 @@
             const old = carryPending();
             if (!old.length) {
               notify(
-                "Yesterday's unfinished intentions are already here.",
+                "Unfinished intentions from the past week are already here.",
                 false
               );
               return;
@@ -3596,7 +3691,7 @@
           if (action === 'clear') {
             const ok = await openConfirm(
               'Delete all local data?',
-              `This permanently removes ${state.habits.length} habit(s), all history, journal entries, saved quotes, daily intentions, and gallery data from this browser. Export a backup first if you may want it later.`,
+              `This permanently removes ${state.habits.length} habit(s), all history, journal entries, saved quotes, daily intentions, habitat pets, and gallery data from this browser. Export a backup first if you may want it later.`,
               'Delete everything'
             );
             if (ok) {
