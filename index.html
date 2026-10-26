@@ -1832,6 +1832,136 @@
           animation-duration: 0.01ms !important;
         }
       }
+      /* Idle animations for the Evrida creatures. */
+      .pet {
+        transform-box: view-box;
+        transform-origin: 50% 90%;
+      }
+      .pet-fish {
+        animation: petBob 3.6s ease-in-out infinite;
+        animation-delay: var(--d, 0s);
+      }
+      .pet-snail {
+        animation: petBreathe 4.2s ease-in-out infinite;
+        animation-delay: var(--d, 0s);
+      }
+      .pet-fish.pet-s0,
+      .pet-snail.pet-s0 {
+        animation-name: petWobble;
+        animation-duration: 3s;
+      }
+      .pet-eye {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: petBlink 5.5s infinite;
+        animation-delay: var(--d, 0s);
+      }
+      .pet-tail {
+        transform-box: fill-box;
+        transform-origin: 100% 50%;
+        animation: petTail 1.8s ease-in-out infinite;
+        animation-delay: var(--d, 0s);
+      }
+      .pet-sway {
+        transform-box: fill-box;
+        transform-origin: 50% 100%;
+        animation: petSway 4.5s ease-in-out infinite;
+        animation-delay: var(--d, 0s);
+      }
+      .pet-spark {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: petTwinkle 2.6s ease-in-out infinite;
+        animation-delay: var(--d, 0s);
+      }
+      .pet-bubble {
+        animation: petRise 4s ease-in infinite;
+        animation-delay: var(--d, 0s);
+      }
+
+      @keyframes petBob {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-1.4px);
+        }
+      }
+      @keyframes petBreathe {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.015, 1.04);
+        }
+      }
+      @keyframes petWobble {
+        0%,
+        100% {
+          transform: rotate(-2.5deg);
+        }
+        50% {
+          transform: rotate(2.5deg);
+        }
+      }
+      @keyframes petBlink {
+        0%,
+        90%,
+        100% {
+          transform: scaleY(1);
+        }
+        94% {
+          transform: scaleY(0.1);
+        }
+      }
+      @keyframes petTail {
+        0%,
+        100% {
+          transform: rotate(-5deg);
+        }
+        50% {
+          transform: rotate(6deg);
+        }
+      }
+      @keyframes petSway {
+        0%,
+        100% {
+          transform: rotate(-2.5deg);
+        }
+        50% {
+          transform: rotate(2.5deg);
+        }
+      }
+      @keyframes petTwinkle {
+        0%,
+        100% {
+          opacity: 0.55;
+          transform: scale(0.8);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.1);
+        }
+      }
+      @keyframes petRise {
+        0% {
+          transform: translateY(0);
+          opacity: 0.9;
+        }
+        100% {
+          transform: translateY(-4px);
+          opacity: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .pet,
+        .pet * {
+          animation: none !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -2582,12 +2712,14 @@
         }
         function petSvg(species, stage) {
           const INK = '#25352b';
+          const kind = species === 'snail' || species === 'plant' ? species : 'fish';
+          const delay = `${(-Math.random() * 6).toFixed(2)}s`;
           const wrap = body =>
-            `<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">${body}</svg>`;
+            `<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><g class="pet pet-${kind} pet-s${Math.max(0, Math.min(3, stage | 0))}" style="--d:${delay}">${body}</g></svg>`;
           const eye = (x, y, r = 2) =>
-            `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff"/>` +
+            `<g class="pet-eye"><circle cx="${x}" cy="${y}" r="${r}" fill="#fff"/>` +
             `<circle cx="${x + r * 0.2}" cy="${y + r * 0.1}" r="${r * 0.62}" fill="${INK}"/>` +
-            `<circle cx="${x + r * 0.45}" cy="${y - r * 0.3}" r="${r * 0.22}" fill="#fff"/>`;
+            `<circle cx="${x + r * 0.45}" cy="${y - r * 0.3}" r="${r * 0.22}" fill="#fff"/></g>`;
           const blush = (x, y) =>
             `<ellipse cx="${x}" cy="${y}" rx="2" ry="1.2" fill="#ff8fa3" opacity=".45"/>`;
           const smile = d =>
@@ -2595,18 +2727,19 @@
           const shadow = rx =>
             `<ellipse cx="20" cy="36.5" rx="${rx}" ry="1.8" fill="${INK}" opacity=".12"/>`;
           const bubble = (x, y, r) =>
-            `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" fill-opacity=".35" stroke="#8cc4ec" stroke-width="1"/>`;
+            `<circle class="pet-bubble" cx="${x}" cy="${y}" r="${r}" fill="#fff" fill-opacity=".35" stroke="#8cc4ec" stroke-width="1"/>`;
           const sparkle = (x, y) =>
-            `<path d="M${x} ${y - 3.2}l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#f2c94c"/>`;
+            `<path class="pet-spark" d="M${x} ${y - 3.2}l1 2.2 2.2 1-2.2 1-1 2.2-1-2.2-2.2-1 2.2-1z" fill="#f2c94c"/>`;
           const leaf = (x, y, rot, s, fill) =>
             `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})">` +
             `<path d="M0 0C-3.4-3-3.4-9 0-12.5 3.4-9 3.4-3 0 0z" fill="${fill}"/>` +
             `<path d="M0-1V-9.5" stroke="#fff" stroke-opacity=".35" stroke-width=".8" stroke-linecap="round"/></g>`;
+          const sway = inner => `<g class="pet-sway">${inner}</g>`;
           const pot = (stageFace = true) =>
             `<path d="M12.5 28h15l-2 8.2H14.5z" fill="#c8795a"/>` +
             `<rect x="11" y="26" width="18" height="4" rx="2" fill="#d98f70"/>` +
             (stageFace
-              ? `<circle cx="17.2" cy="32.2" r="1" fill="${INK}"/><circle cx="22.8" cy="32.2" r="1" fill="${INK}"/>` +
+              ? `<g class="pet-eye"><circle cx="17.2" cy="32.2" r="1" fill="${INK}"/><circle cx="22.8" cy="32.2" r="1" fill="${INK}"/></g>` +
                 smile('M18.6 34c.9.8 1.9.8 2.8 0') +
                 blush(15.4, 33.6) +
                 blush(24.6, 33.6)
@@ -2620,13 +2753,13 @@
                 `<circle cx="22.5" cy="20" r="1.1" fill="${INK}"/>` +
                 `<ellipse cx="14.5" cy="15.5" rx="3" ry="1.6" fill="#fff" opacity=".75" transform="rotate(-35 14.5 15.5)"/>` +
                 bubble(33, 9, 1.6) + bubble(7, 12, 1),
-              `<path d="M14 21 6.5 15v12z" fill="#5aaee8" stroke="#5aaee8" stroke-width="1.2" stroke-linejoin="round"/>` +
+              `<path class="pet-tail" d="M14 21 6.5 15v12z" fill="#5aaee8" stroke="#5aaee8" stroke-width="1.2" stroke-linejoin="round"/>` +
                 `<ellipse cx="21" cy="21" rx="8.5" ry="6" fill="#7cc4f5"/>` +
                 `<ellipse cx="22" cy="23.6" rx="6" ry="2.6" fill="#d6eeff"/>` +
                 `<path d="M18 15.6c1.6-3.2 4.2-3.6 6.2-1.6z" fill="#5aaee8"/>` +
                 eye(25.5, 19.5, 2.2) + blush(26.5, 23.4) +
                 bubble(32, 11, 1.4) + bubble(35, 16, 0.9),
-              `<path d="M12 21C8 17 6 14 3.5 13 4.5 17 4.5 25 3.5 29 6 28 8 25 12 21z" fill="#3b95e0"/>` +
+              `<path class="pet-tail" d="M12 21C8 17 6 14 3.5 13 4.5 17 4.5 25 3.5 29 6 28 8 25 12 21z" fill="#3b95e0"/>` +
                 `<ellipse cx="21" cy="21" rx="10.5" ry="7.5" fill="#4aa3e8"/>` +
                 `<ellipse cx="22" cy="25" rx="7" ry="3" fill="#dff1ff" opacity=".85"/>` +
                 `<path d="M17 14.4c2 3 2 10.4 0 13.4M22 13.8c2 3.2 2 11 0 14" fill="none" stroke="#2f80c8" stroke-width="1.5" stroke-linecap="round" opacity=".45"/>` +
@@ -2634,8 +2767,8 @@
                 `<path d="M19.5 23c-2 2-2.2 4.2-.6 5.2 2-.5 3.4-2.6 3.4-4.6z" fill="#2f80c8" opacity=".75"/>` +
                 eye(26.5, 18.8, 2.6) + blush(28, 23.6) + smile('M30.4 23.4c-.9.9-2 1-2.9.4') +
                 bubble(34, 10, 1.5) + bubble(36.5, 15, 1),
-              `<path d="M10 21C6 16 3 12 1.5 7.5 7.5 8 11.5 12 13.5 16.5z" fill="#1f78d1"/>` +
-                `<path d="M10 21C6 26 3 30 1.5 34.5 7.5 34 11.5 30 13.5 25.5z" fill="#1f78d1"/>` +
+              `<g class="pet-tail"><path d="M10 21C6 16 3 12 1.5 7.5 7.5 8 11.5 12 13.5 16.5z" fill="#1f78d1"/>` +
+                `<path d="M10 21C6 26 3 30 1.5 34.5 7.5 34 11.5 30 13.5 25.5z" fill="#1f78d1"/></g>` +
                 `<ellipse cx="22" cy="21" rx="13.5" ry="9" fill="#2f8fe0"/>` +
                 `<ellipse cx="23" cy="25.6" rx="9.5" ry="3.8" fill="#cfe9fb" opacity=".9"/>` +
                 `<path d="M14 18c2 1.5 2 5 0 6.5M18 16.5c2.2 2 2.2 7 0 9M22 16c2.2 2.2 2.2 8 0 10" fill="none" stroke="#1f78d1" stroke-width="1.2" stroke-linecap="round" opacity=".5"/>` +
@@ -2684,20 +2817,20 @@
               shadow(11) +
                 `<ellipse cx="20" cy="33.5" rx="11" ry="4" fill="#8a6a4d"/>` +
                 `<ellipse cx="20" cy="29" rx="5.8" ry="4.6" fill="#c19a6b"/>` +
-                `<path d="M20 24.6c0-2.2 1.2-3.4 3-3.6" stroke="#6aa84f" stroke-width="1.6" fill="none" stroke-linecap="round"/>` +
-                leaf(23.2, 21.2, 55, 0.45, '#8bc34a') +
+                sway(`<path d="M20 24.6c0-2.2 1.2-3.4 3-3.6" stroke="#6aa84f" stroke-width="1.6" fill="none" stroke-linecap="round"/>` +
+                leaf(23.2, 21.2, 55, 0.45, '#8bc34a')) +
                 `<ellipse cx="17.6" cy="27.2" rx="1.6" ry="1" fill="#fff" opacity=".45" transform="rotate(-30 17.6 27.2)"/>` +
-                `<circle cx="18" cy="29.4" r=".9" fill="${INK}"/><circle cx="22" cy="29.4" r=".9" fill="${INK}"/>` +
+                `<g class="pet-eye"><circle cx="18" cy="29.4" r=".9" fill="${INK}"/><circle cx="22" cy="29.4" r=".9" fill="${INK}"/></g>` +
                 smile('M19 31.2c.7.6 1.3.6 2 0'),
-              shadow(10) + pot() +
+              shadow(10) + pot() + sway(
                 `<path d="M20 26.4V19" stroke="#4f8a4f" stroke-width="2" stroke-linecap="round"/>` +
-                leaf(20, 20, -38, 0.85, '#7cb342') + leaf(20, 20, 38, 0.85, '#8bc34a'),
-              shadow(10) + pot() +
+                leaf(20, 20, -38, 0.85, '#7cb342') + leaf(20, 20, 38, 0.85, '#8bc34a')),
+              shadow(10) + pot() + sway(
                 `<path d="M20 26.4V13.6" stroke="#4f8a4f" stroke-width="2.2" stroke-linecap="round"/>` +
                 leaf(20, 23, -62, 0.95, '#6aa84f') + leaf(20, 23, 62, 0.95, '#7cb342') +
                 leaf(20, 17.5, -32, 1.05, '#8bc34a') + leaf(20, 17.5, 32, 1.05, '#7cb342') +
-                leaf(20, 14, 0, 0.8, '#9ccc65'),
-              shadow(10) + pot() +
+                leaf(20, 14, 0, 0.8, '#9ccc65')),
+              shadow(10) + pot() + sway(
                 `<path d="M20 26.4V11" stroke="#4f8a4f" stroke-width="2.4" stroke-linecap="round"/>` +
                 leaf(20, 24, -66, 1.1, '#5f9e45') + leaf(20, 24, 66, 1.1, '#6aa84f') +
                 leaf(20, 19.5, -42, 1.15, '#7cb342') + leaf(20, 19.5, 42, 1.15, '#8bc34a') +
@@ -2705,7 +2838,7 @@
                 [0, 72, 144, 216, 288]
                   .map(a => `<circle cx="${(20 + 3.7 * Math.sin((a * Math.PI) / 180)).toFixed(2)}" cy="${(7.6 - 3.7 * Math.cos((a * Math.PI) / 180)).toFixed(2)}" r="3.1" fill="#f4a6b8"/>`)
                   .join('') +
-                `<circle cx="20" cy="7.6" r="2.4" fill="#f2c94c"/>`
+                `<circle cx="20" cy="7.6" r="2.4" fill="#f2c94c"/>`)
             ]
           };
           const set = art[species] || art.fish;
