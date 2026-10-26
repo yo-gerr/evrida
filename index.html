@@ -1962,6 +1962,189 @@
           animation: none !important;
         }
       }
+
+      /* Evrida zoo habitat. */
+      .zoo {
+        position: relative;
+        height: clamp(320px, 54vw, 460px);
+        border: var(--bw) solid var(--line);
+        border-radius: var(--r-lg);
+        overflow: hidden;
+        background: var(--card);
+      }
+      .zoo-water {
+        position: absolute;
+        inset: 0 0 38% 0;
+        background: linear-gradient(
+          180deg,
+          color-mix(in srgb, #64b5f6 22%, var(--card)),
+          color-mix(in srgb, #1e88e5 36%, var(--card))
+        );
+      }
+      .zoo-water::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.1) 0 16px, transparent 16px 54px);
+        pointer-events: none;
+      }
+      .zoo-ground {
+        position: absolute;
+        inset: 62% 0 0 0;
+        background: linear-gradient(
+          180deg,
+          color-mix(in srgb, #d8b66a 38%, var(--card)) 0 8%,
+          color-mix(in srgb, #6aa84f 34%, var(--card)) 8% 100%
+        );
+      }
+      .zoo-weed {
+        position: absolute;
+        bottom: -2px;
+        width: 22px;
+        height: 48px;
+        transform-origin: 50% 100%;
+        animation: zooWeed 5s ease-in-out infinite alternate;
+        animation-delay: var(--wd, 0s);
+      }
+      .zoo-bubbles span {
+        position: absolute;
+        bottom: 0;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        animation: zooBubble var(--bd, 6s) linear infinite;
+        animation-delay: var(--bs, 0s);
+      }
+
+      .zoo-actor {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 0;
+        border: 0;
+        background: none;
+        cursor: pointer;
+        left: calc((var(--x0) + var(--x1)) / 2);
+        top: var(--y, auto);
+        bottom: var(--by, auto);
+        transform: translateX(-50%);
+        z-index: var(--z, 1);
+        animation: zooPath var(--t, 20s) ease-in-out infinite alternate;
+        animation-delay: var(--d, 0s);
+      }
+      .zoo-actor.kind-plant {
+        left: var(--x0);
+        animation: none;
+      }
+      .zoo-actor svg {
+        display: block;
+        width: var(--s);
+        height: var(--s);
+        overflow: visible;
+      }
+      .zoo-tag {
+        max-width: 112px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        background: color-mix(in srgb, var(--card) 90%, transparent);
+        color: var(--ink);
+        border: var(--bw) solid var(--line);
+        border-radius: var(--r-pill);
+        padding: 1px 8px;
+        font-size: 11.5px;
+        font-weight: 650;
+        line-height: 1.5;
+        box-shadow: var(--shadow-1);
+      }
+      .zoo-tag.done {
+        border-color: var(--good);
+      }
+      .zoo-actor:hover .zoo-tag,
+      .zoo-actor:focus-visible .zoo-tag {
+        max-width: none;
+      }
+      .zoo-flip {
+        display: block;
+        animation: zooFlip calc(var(--t, 20s) * 2) linear infinite;
+        animation-delay: var(--d, 0s);
+      }
+      .zoo-bob {
+        display: block;
+        animation: zooBob var(--bt, 4s) ease-in-out infinite alternate;
+        animation-delay: var(--d, 0s);
+      }
+      .kind-plant .zoo-flip,
+      .kind-plant .zoo-bob,
+      .kind-snail .zoo-bob {
+        animation: none;
+      }
+
+      .art-card:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      @keyframes zooPath {
+        from {
+          left: var(--x0);
+        }
+        to {
+          left: var(--x1);
+        }
+      }
+      @keyframes zooFlip {
+        0%,
+        49.99% {
+          transform: scaleX(1);
+        }
+        50%,
+        100% {
+          transform: scaleX(-1);
+        }
+      }
+      @keyframes zooBob {
+        from {
+          transform: translateY(-5px);
+        }
+        to {
+          transform: translateY(5px);
+        }
+      }
+      @keyframes zooWeed {
+        from {
+          transform: rotate(-5deg);
+        }
+        to {
+          transform: rotate(5deg);
+        }
+      }
+      @keyframes zooBubble {
+        0% {
+          transform: translateY(0);
+          opacity: 0;
+        }
+        15% {
+          opacity: 0.9;
+        }
+        100% {
+          transform: translateY(-190px);
+          opacity: 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .zoo-actor,
+        .zoo-flip,
+        .zoo-bob,
+        .zoo-weed,
+        .zoo-bubbles span {
+          animation: none !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -2295,6 +2478,7 @@
           // Insights owns trends and the habitat tank.
           // Session-only view state; never persisted.
           insightView = 'trends',
+          habitatMode = 'zoo',
           editingId = null,
           insightPeriod = 30,
           insightCategory = 'All categories',
@@ -3347,12 +3531,100 @@
           html += `<div class="panel"><h3>Habit snapshot · ${fmt(journalDate)}</h3><p class="muted small-text">An optional glance at how your habits and reflections fit together. This does not change any habit status.</p>${dayHabits.length ? `<p><strong>${dayDone.length} of ${dayHabits.length}</strong> scheduled habits completed</p><p class="small-text">${dayHabits.map(h => `${completed(h, journalDate) ? '✓' : '○'} ${esc(h.name)}`).join(' · ')}</p>` : `<p class="muted small-text">No habits scheduled for this date.</p>`}</div><div class="privacy-note">🔒 Journal entries stay in this browser and are included in your JSON backup. Browser local storage is <strong>not encrypted by default</strong>; anyone with access to this browser profile may be able to read it. Browser cleanup can erase it, so export backups regularly.</div>`;
           return html;
         }
+        const ZOO_MAX = 30;
         function renderHabitat() {
           if (!state.habits.length)
             return empty(
               'Your tank starts with a habit',
               'Create a habit and your creatures will grow as you complete scheduled days.'
             );
+          const total = state.habits.length;
+          const zooShown = Math.min(total, ZOO_MAX);
+          const header =
+            `<div class="card-actions" style="margin:0 0 var(--sp-3);align-items:center;flex-wrap:wrap;gap:var(--sp-2)">` +
+            `<div class="seg" role="tablist" aria-label="Habitat view">` +
+            `<button type="button" data-habitat-mode="zoo" role="tab" aria-selected="${habitatMode === 'zoo'}" class="${habitatMode === 'zoo' ? 'active' : ''}">Zoo (${zooShown})</button>` +
+            `<button type="button" data-habitat-mode="cards" role="tab" aria-selected="${habitatMode === 'cards'}" class="${habitatMode === 'cards' ? 'active' : ''}">Cards (${total})</button>` +
+            `</div>` +
+            `<span class="grow"></span>` +
+            `<span class="small-text muted">${habitatMode === 'zoo' ? (zooShown < total ? `Showing first ${zooShown} in scene; rest appear in Cards.` : 'All creatures in the scene.') : 'All creatures shown as cards.'}</span>` +
+            `</div>`;
+          const body = habitatMode === 'zoo' ? renderZoo() : renderHabitatCards();
+          return header + body;
+        }
+
+        function renderZoo() {
+          const rnd = (id, salt) => {
+            let h = (2166136261 ^ salt) >>> 0;
+            for (const c of id) {
+              h ^= c.charCodeAt(0);
+              h = Math.imul(h, 16777619);
+            }
+            return ((h >>> 0) % 10000) / 10000;
+          };
+          const habits = state.habits.slice(0, ZOO_MAX);
+          const plantCount = habits.filter(h => ensurePet(h.id).species === 'plant').length || 1;
+          let plantIndex = 0;
+          const actors = habits
+            .map(h => {
+              const p = ensurePet(h.id),
+                kind = ['fish', 'snail', 'plant'].includes(p.species) ? p.species : 'fish',
+                r = n => rnd(h.id, n);
+              let size, x0, x1, t, place, z;
+              if (kind === 'fish') {
+                size = 40 + p.stage * 10;
+                x0 = 12 + r(1) * 30;
+                x1 = x0 + 20 + r(2) * 26;
+                t = 12 + r(4) * 10;
+                place = `--y:${(4 + r(3) * 28).toFixed(1)}%`;
+                z = 40;
+              } else if (kind === 'snail') {
+                size = 38 + p.stage * 8;
+                x0 = 12 + r(1) * 30;
+                x1 = x0 + 14 + r(2) * 24;
+                t = 40 + r(4) * 30;
+                const by = 4 + r(3) * 9;
+                place = `--by:${by.toFixed(1)}%`;
+                z = Math.round(30 - by);
+              } else {
+                size = 44 + p.stage * 9;
+                x0 = x1 = 12 + ((plantIndex + 0.5) / plantCount) * 76 + (r(1) - 0.5) * 4;
+                t = 20;
+                const by = 3 + r(3) * 5;
+                place = `--by:${by.toFixed(1)}%`;
+                z = Math.round(30 - by);
+                plantIndex++;
+              }
+              const done = eligible(h) && completed(h, today());
+              const style =
+                `--x0:${x0.toFixed(1)}%;--x1:${x1.toFixed(1)}%;${place};--t:${t.toFixed(1)}s;` +
+                `--d:${(-r(5) * 2 * t).toFixed(1)}s;--bt:${(3 + r(6) * 3).toFixed(1)}s;--s:${size}px;--z:${z}`;
+              return (
+                `<button type="button" class="zoo-actor kind-${kind}" data-action="zoo-open" data-id="${esc(h.id)}" style="${style}" ` +
+                `aria-label="${esc(h.name)}, ${PET_STAGES[p.stage].name}. Show its card.">` +
+                `<span class="zoo-tag${done ? ' done' : ''}">${esc(h.icon)} ${esc(h.name)}${done ? ' ✓' : ''}</span>` +
+                `<span class="zoo-flip"><span class="zoo-bob">${petSvg(kind, p.stage)}</span></span></button>`
+              );
+            })
+            .join('');
+          const weeds = [6, 31, 58, 88]
+            .map(
+              (x, i) =>
+                `<svg class="zoo-weed" style="left:${x}%;--wd:${i * -1.3}s" viewBox="0 0 20 44" aria-hidden="true"><path d="M10 44C3 33 17 27 10 16S11 5 10 2" fill="none" stroke="#5f9e45" stroke-width="3.4" stroke-linecap="round"/></svg>`
+            )
+            .join('');
+          const bubbles = [10, 27, 46, 66, 83]
+            .map((x, i) => `<span style="left:${x}%;--bd:${5 + i * 1.3}s;--bs:${-i * 1.7}s"></span>`)
+            .join('');
+          const due = habits.filter(h => eligible(h)),
+            careDone = due.filter(h => completed(h, today())).length;
+          return (
+            `<div class="small-text muted" style="margin:0 0 var(--sp-2)">${careDone} of ${due.length} habits cared for today. Tap a creature to open its card.</div>` +
+            `<div class="zoo" role="group" aria-label="Habitat with your creatures"><div class="zoo-water">${weeds}<div class="zoo-bubbles" aria-hidden="true">${bubbles}</div></div><div class="zoo-ground" aria-hidden="true"></div>${actors}</div>`
+          );
+        }
+
+        function renderHabitatCards() {
           state.pets = state.pets || {};
           let html = `<div class="panel" style="background:linear-gradient(180deg, color-mix(in srgb, #64b5f6 12%, var(--card)) 0%, var(--card) 100%);"><h3>Habitat</h3><p class="small-text">Each creature grows with completed scheduled days. Missed or rest days never shrink them.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--sp-4);margin-top:var(--sp-4)">${state.habits
             .map(h => {
@@ -3362,7 +3634,7 @@
               const xp = p.xp;
               const need = next ? next.xp - xp : 0;
               const pctXp = next ? Math.min(100, Math.round((100 * (xp - stage.xp)) / Math.max(1, next.xp - stage.xp))) : 100;
-              return `<div class="art-card" style="text-align:center"><div style="width:80px;height:80px;margin:0 auto 10px">${petSvg(p.species, p.stage)}</div><h4>${esc(h.icon)} ${esc(h.name)}</h4><p>${stage.name} · ${xp} care points</p>${next ? `<div class="track" style="margin:8px auto;max-width:160px"><span style="width:${pctXp}%"></span></div><p class="small-text">${need} more to reach ${next.name}</p>` : `<p class="small-text">Fully grown — keep up the gentle care.</p>`}</div>`;
+              return `<div class="art-card" id="pet-card-${esc(h.id)}" tabindex="-1" style="text-align:center"><div style="width:80px;height:80px;margin:0 auto 10px">${petSvg(p.species, p.stage)}</div><h4>${esc(h.icon)} ${esc(h.name)}</h4><p>${stage.name} · ${xp} care points</p>${next ? `<div class="track" style="margin:8px auto;max-width:160px"><span style="width:${pctXp}%"></span></div><p class="small-text">${need} more to reach ${next.name}</p>` : `<p class="small-text">Fully grown — keep up the gentle care.</p>`}</div>`;
             })
             .join('')}</div></div>`;
           return html;
@@ -3465,6 +3737,12 @@
           root.querySelectorAll('[data-insight-view]').forEach(b =>
             b.addEventListener('click', () => {
               insightView = b.dataset.insightView;
+              render();
+            })
+          );
+          root.querySelectorAll('[data-habitat-mode]').forEach(b =>
+            b.addEventListener('click', () => {
+              habitatMode = b.dataset.habitatMode;
               render();
             })
           );
