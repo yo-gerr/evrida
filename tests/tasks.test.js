@@ -2,11 +2,13 @@
 // Daily intentions: "Bring forward" must offer only yesterday's unfinished
 // items that are not already in today's list, so repeated presses cannot
 // stack duplicates. Yesterday's entries are never modified by carrying.
+// Renaming an intention in place reuses intentionText(), the same trim and
+// 120-character cap the add form and normalize() apply.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadApp, setToday } = require('./helpers/load-app');
 
-const { carryPending, setState } = loadApp();
+const { carryPending, intentionText, setState } = loadApp();
 
 // Clock pinned to 2026-01-15 (Thursday), so yesterday is 2026-01-14.
 const todayKey = '2026-01-15';
@@ -112,4 +114,30 @@ test('carryPending keeps duplicate texts from yesterday on the first press', (t)
     ],
   });
   assert.equal(carryPending().length, 2);
+});
+
+// --- Inline rename text rule ------------------------------------------------
+// The label editor commits through intentionText(), so an edit obeys exactly
+// the same limits as a newly added intention.
+
+test('intentionText trims surrounding whitespace on an edit', () => {
+  assert.equal(intentionText('   Walk after lunch   '), 'Walk after lunch');
+});
+
+test('intentionText caps an edit at the 120-character limit', () => {
+  const long = 'a'.repeat(140);
+  const out = intentionText(long);
+  assert.equal(out.length, 120);
+  assert.equal(out, 'a'.repeat(120));
+});
+
+test('intentionText leaves a normal edit unchanged', () => {
+  assert.equal(intentionText('Read one page'), 'Read one page');
+});
+
+test('intentionText reports blank input as empty so an edit reverts', () => {
+  assert.equal(intentionText(''), '');
+  assert.equal(intentionText('   '), '');
+  assert.equal(intentionText(null), '');
+  assert.equal(intentionText(undefined), '');
 });

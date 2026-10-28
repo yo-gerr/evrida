@@ -39,7 +39,7 @@ Evrida brings several lightweight personal-growth tools together in one place:
 
 - Track habits with daily targets and custom schedules.
 - Record partial progress as well as completed goals.
-- Review historical activity using calendars and nurture a habitat of creatures.
+- Review historical activity and watch a companion grow alongside each habit.
 - Explore completion trends and streaks without treating them as a judgment.
 - Write optional journal entries and track a simple mood.
 - Maintain a small list of daily intentions.
@@ -84,6 +84,7 @@ This README documents the current single-file implementation. It does not imply 
 - Includes a daily inspirational quote, with the ability to save or unsave it.
 - Provides daily intentions: a lightweight checklist separate from habits.
 - Supports bringing forward unfinished intentions from the previous day, subject to the daily item limit.
+- Renames an intention in place: double-click its text, or press and hold it on touch, or focus it and press Enter. There is no separate edit button, and the same 120-character limit applies to edits.
 - Limits each intention to 120 characters and each date to 100 intentions; a remaining-character count appears as the limit approaches, and reaching 120 is announced for screen readers.
 
 A habit can have a target greater than one. Reaching the target marks the day complete; partial progress remains visible. Taps stop at the daily target, an accidental double-tap is ignored, and every change is followed by an undo toast. Keyboard users press Enter to add one and Shift+Enter to subtract one.
@@ -130,7 +131,7 @@ Avoid presenting rest days or unscheduled days as failures.
 Insights has two views, selected with a Trends / Habitat switcher under the page title:
 
 - **Trends** summarizes progress over a selectable time period and category. Depending on the selected filters, the view includes completion rates, scheduled/completed day counts, habit-level comparisons, and streak information.
-- **Habitat** shows a gentle tank where each habit has a creature (fish, snail, or plant). Creatures grow as you complete scheduled days, gain care points over time, and progress through egg, fry, juvenile, and adult stages. Missed or rest days never shrink them; there are no leaderboards.
+- **Habitat** is a gentle shared tank where every habit has a companion (fish, snail, or plant). A companion grows as you complete scheduled days, gains care points over time, and progresses through egg, fry, juvenile, and adult stages. Missed or rest days never shrink them, and there are no leaderboards. Each companion can have a name of its own; without one, its habit's name is shown instead. Companions never earn progress from being poked—only real completed days move them forward.
 
 The selected view is session-only and is not persisted or included in backups. Moving to Insights from the navigation resets to Trends so the page never opens on a stale view.
 
@@ -281,15 +282,18 @@ When the page is served over HTTPS or `localhost`, upload `manifest.webmanifest`
 
 1. Choose **New habit**.
 2. Enter a descriptive name — this becomes the behavior in the commitment sentence.
-3. Optionally name **When?** and **Where?**, for example "after lunch" and "at my desk". A trigger works as a when: "after I brush my teeth."
-4. Set the daily target.
-5. Select the start date.
-6. Choose a category or enter a custom category.
-7. Select one or more weekdays.
-8. Choose an emoji and color.
-9. Save the habit.
+3. Optionally give the habit a **Companion name**, the name of the companion that will accompany this habit in the Habitat. If left empty, the habit name is used.
+4. Optionally name **When?** and **Where?**, for example "after lunch" and "at my desk". A trigger works as a when: "after I brush my teeth."
+5. Set the daily target.
+6. Select the start date.
+7. Choose a category or enter a custom category.
+8. Select one or more weekdays.
+9. Choose an emoji and color.
+10. Save the habit.
 
 When, where, and the habit name are combined on the habit card into a display-only sentence — *"I will read 10 pages after lunch at my desk"* — built from whichever parts you fill in and never stored as generated text. The fields are optional planning prompts grounded in implementation-intention research, never reminders or notifications, and they do not affect scheduling, streaks, or insights. Habits created before this feature are unaffected; an earlier single "when and where" note is migrated into the **When?** field.
+
+The companion name is presentation only: it changes the label shown in the Habitat and never affects scheduling, streaks, insights, or stored completion data. Habits created before companion names existed keep working without change — their habit name is shown until a companion name is set.
 
 Prefer small, measurable targets. For example, “Read 10 pages” is more actionable than “Read more.”
 
@@ -297,9 +301,17 @@ Prefer small, measurable targets. For example, “Read 10 pages” is more actio
 
 Tap a habit's counter to add one toward its daily target; the counter shows the current count, for example `3/5`. Press and hold the counter to subtract one — useful for correcting an accidental tap — and hold long enough only to trigger one decrement. Quick double-taps are ignored, taps stop at the daily target, and a toast with an Undo button follows every change. Keyboard users press Enter to add one and Shift+Enter to subtract one. Progress cannot be recorded for future dates or dates before the habit's start date.
 
+### Daily intentions
+
+The Today dashboard also holds a short list of daily intentions. They are separate from habits: no streaks, no targets, and no effect on insights. Type one and press **Add**, tick its checkbox when it is done, or press **×** to remove it (with Undo).
+
+To rename an intention, double-click its text. On a touch screen, press and hold instead; keyboard users focus the text and press Enter or F2. Enter or clicking elsewhere saves the edit, Escape cancels it, and saving an empty field keeps the previous text — removing an item stays an explicit choice through **×**. Edits obey the same trim and 120-character limit as a new intention.
+
+Unfinished intentions from up to the previous seven days can be brought forward with **Bring forward**, subject to the 100-per-day limit. Bringing them forward copies them into today; it never rewrites the earlier day.
+
 ### Review trends
 
-Use History to inspect individual dates, Insights → Trends to compare completion patterns, and Insights → Mosaic to view the 13-week mosaic. Interpret metrics in context: new habits and intentionally infrequent schedules can have different-looking rates.
+Use History to inspect individual dates, Insights → Trends to compare completion patterns, and Insights → Habitat to visit your companions. Interpret metrics in context: new habits and intentionally infrequent schedules can have different-looking rates.
 
 ### Journal
 
@@ -398,12 +410,14 @@ The following describes the current logical state. It is documentation for the c
 
 | Property | Purpose |
 |---|---|
-| `version` | Persisted schema version (`8` in the current build) |
+| `version` | Persisted schema version (`9` in the current build) |
 | `habits` | Array of habit records |
 | `gallery` | Array of optional gallery-related records retained by normalization |
 | `journal` | Object keyed by date (`YYYY-MM-DD`) |
 | `savedQuotes` | Array of indexes into the built-in quote list |
 | `tasks` | Object keyed by date; each value is a daily intention list |
+| `pets` | Object keyed by habit id; each value holds companion progress (`xp`, `stage`, `species`) |
+| `dismissedCarries` | Object of `date::intention-text` keys remembering intentions the user deleted, so "Bring forward" does not resurface them. Pruned to the last week during normalization |
 | `settings.theme` | `system`, `light`, or `dark` |
 
 Exports additionally include `app` and `exportedAt` metadata.
@@ -423,6 +437,7 @@ Exports additionally include `app` and `exportedAt` metadata.
 | `done` | Object mapping dates to recorded counts |
 | `when` | Optional implementation intention ("when") — free text up to 60 characters, e.g. `after lunch` or `after I brush my teeth`; omitted when empty |
 | `where` | Optional implementation intention ("where") — free text up to 60 characters, e.g. `at my desk`; omitted when empty |
+| `petName` | Optional companion name — free text up to 20 characters, shown as the companion's label in the Habitat. Omitted when empty, in which case the habit's `name` is displayed |
 | `art` | Optional legacy/additional object retained when present by normalization |
 
 A completion count is capped at 999 during normalization and normal interaction. A date only contributes to scheduled-day metrics when it is on or after the start date and matches the habit's schedule.
@@ -433,7 +448,7 @@ A date-keyed journal entry contains `note`, `wentWell`, `challenge`, `grateful`,
 
 ### Daily intention record
 
-Each task has an `id`, `text`, and `done` boolean. Text is limited to 120 characters by normalization and the UI limits each date to 100 intentions.
+Each task has an `id`, `text`, and `done` boolean. Text is limited to 120 characters by normalization and the UI limits each date to 100 intentions. Renaming an intention in place rewrites only `text`; its `id`, `done` state, and date key are untouched, so an edit cannot move an item to another day or change whether it counts as done.
 
 ### Date conventions
 
@@ -564,7 +579,8 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Scheduled weekdays are respected by history, streaks, and completion rates.
 - [ ] Every icon in the picker renders as a recognizable glyph rather than a placeholder, the tray scrolls without growing the dialog, and reopening a habit for editing shows its stored icon selected.
 - [ ] History and the Insights mosaic show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
-- [ ] The Insights Trends / Mosaic switcher works, shows the correct view, and marks the active view for assistive technology.
+- [ ] The Insights Trends / Habitat switcher works, shows the correct view, and marks the active view for assistive technology.
+- [ ] The Habitat shows each companion with its companion name (or its habit name when none is set), and companions without a name are explained by the hint above the scene.
 - [ ] The header brand mark renders as the rounded-square `E` with its gold dot in both themes, is not announced twice by a screen reader, and does not shift the header layout.
 - [ ] Mosaic squares stay legible, do not overflow their cards, and stack to one column on narrow screens.
 - [ ] The mobile bottom bar shows five items, none of their labels clip or wrap at a 360px viewport, and the active item is indicated.
@@ -573,6 +589,7 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Mood selection persists.
 - [ ] Saved quotes persist and can be removed.
 - [ ] Daily intentions can be added, completed, deleted, and carried forward.
+- [ ] Double-clicking an intention's text (or holding it on touch, or pressing Enter on the focused text) opens an inline editor; Enter saves, Escape cancels, an empty save keeps the previous text, and the row's checkbox and × keep working immediately afterwards.
 - [ ] Daily intention count and text limits are enforced, and the character count appears as the 120-character limit nears.
 - [ ] System, light, and dark themes work.
 - [ ] Export downloads valid JSON.

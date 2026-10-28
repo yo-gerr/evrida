@@ -20,7 +20,7 @@ const EXPORTED_NAMES = [
   'goal', 'count', 'completed', 'scheduled', 'fmt', 'pct',
   'defaultState', 'normalize', 'currentStreak', 'bestStreak', 'eligible',
   'stats', 'completionStats', 'recoveryStats', 'quoteForToday',
-  'carryPending', 'cueSentence', 'KEY', 'VERSION', 'CATEGORIES', 'COLORS', 'EMOJIS', 'QUOTES',
+  'carryPending', 'intentionText', 'cueSentence', 'KEY', 'VERSION', 'CATEGORIES', 'COLORS', 'EMOJIS', 'QUOTES',
 ];
 
 function makeElement() {

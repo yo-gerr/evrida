@@ -1029,6 +1029,41 @@
         flex: 1;
         min-width: 0;
         overflow-wrap: anywhere;
+        cursor: text;
+        /* Removes the double-tap zoom delay, so a double-click on the text
+           reliably opens the editor on Android as well as desktop. */
+        touch-action: manipulation;
+      }
+
+      .task-row .task-label:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      /* Inline editor that replaces the label while renaming. It inherits the
+         row's typography so the text does not visibly jump when it opens. */
+      .task-row .task-edit {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+        min-height: 28px;
+        font: inherit;
+        color: var(--ink);
+        background: var(--card);
+        border: var(--bw) solid var(--accent);
+        border-radius: var(--r-sm);
+        padding: 3px 8px;
+      }
+
+      @media (hover: none) {
+        /* A press-and-hold opens the editor on touch, so suppress the text
+           selection and callout sheet that would otherwise appear first. */
+        .task-row .task-label {
+          cursor: default;
+          -webkit-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
+        }
       }
 
       .task-row.done .task-label {
@@ -1578,23 +1613,27 @@
       .toast {
         position: fixed;
         left: 50%;
-        bottom: 24px;
-        transform: translateX(-50%) translateY(20px);
-        background: var(--ink);
-        color: var(--bg);
-        border-radius: var(--r-md);
-        padding: 12px 16px;
-        font-size: 14px;
+        bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+        transform: translateX(-50%) translateY(calc(100% + 24px));
+        background: var(--card);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        box-shadow: var(--shadow-2);
+        padding: 10px 14px;
+        font-size: var(--fs-sm);
         display: flex;
         align-items: center;
-        gap: var(--sp-3);
+        gap: var(--sp-2);
         opacity: 0;
         pointer-events: none;
         transition:
           opacity var(--dur-2) var(--ease),
           transform var(--dur-2) var(--ease);
-        z-index: 50;
-        max-width: min(92vw, 480px);
+        z-index: 60;
+        max-width: min(calc(100vw - 32px), 420px);
+        width: fit-content;
+        text-align: left;
       }
 
       .toast.show {
@@ -1603,14 +1642,52 @@
         pointer-events: auto;
       }
 
-      .toast button {
-        background: transparent;
+      .toast-icon {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent);
+      }
+
+      .toast-message {
+        flex: 1 1 auto;
+        min-width: 0;
+        line-height: 1.4;
+      }
+
+      .toast-action {
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--accent);
         border: 0;
-        color: inherit;
-        text-decoration: underline;
-        font-weight: 700;
-        font-size: 14px;
-        padding: 4px;
+        border-radius: var(--r-pill);
+        font-weight: 600;
+        font-size: var(--fs-sm);
+        padding: 6px 12px;
+        line-height: 1;
+        transition: background var(--dur-1) var(--ease);
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
+
+      .toast-action:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--accent) 18%, transparent);
+      }
+
+      .toast-action:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .toast {
+          transition: opacity var(--dur-1) linear;
+        }
+        .toast.show {
+          transform: translateX(-50%);
+        }
       }
 
       /* ---------- Utilities ---------- */
@@ -1804,7 +1881,9 @@
         }
 
         .toast {
-          bottom: calc(78px + env(safe-area-inset-bottom));
+          bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+          padding: 9px 12px;
+          gap: var(--sp-2);
         }
 
         .modal-footer .btn {
@@ -1832,7 +1911,7 @@
           animation-duration: 0.01ms !important;
         }
       }
-      /* Idle animations for the Evrida creatures. */
+      /* Idle animations for the Evrida companions. */
       .pet {
         transform-box: view-box;
         transform-origin: 50% 90%;
@@ -2192,6 +2271,20 @@
             required
           />
         </div>
+        <div class="field">
+          <label for="petName">Companion name (optional)</label
+          ><input
+            id="petName"
+            type="text"
+            maxlength="20"
+            placeholder="e.g. Pagey"
+          />
+          <p class="small-text muted hint">
+            Your companion waits for you in the Habitat and grows as you keep
+            this habit. Give it a name if you like; if you leave this empty,
+            your habit name is used instead.
+          </p>
+        </div>
         <div class="two">
           <div class="field">
             <label for="habitWhen">When? (optional)</label
@@ -2287,8 +2380,15 @@
         ><button class="btn primary" id="confirmOk">Continue</button>
       </div>
     </dialog>
-    <div class="toast" id="toast" role="status" aria-live="polite">
-      <span id="toastText"></span><button id="undoBtn">Undo</button>
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+      <span class="toast-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="9" cy="9" r="8" fill="currentColor" opacity="0.12"/>
+          <path d="M6.25 9.25L8 11L11.75 7.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span id="toastText" class="toast-message"></span>
+      <button id="undoBtn" class="toast-action">Undo</button>
     </div>
     <script>
       (() => {
@@ -2472,10 +2572,11 @@
             savedQuotes: [],
             tasks: {},
             pets: {},
+            dismissedCarries: {},
             settings: { theme: 'system' }
           },
           activePage = 'today',
-          // Insights owns trends and the habitat tank.
+          // Insights owns trends and the habitat with its companions.
           // Session-only view state; never persisted.
           insightView = 'trends',
           habitatMode = 'zoo',
@@ -2539,6 +2640,7 @@
             savedQuotes: [],
             tasks: {},
             pets: {},
+            dismissedCarries: {},
             settings: { theme: 'system' }
           };
         }
@@ -2613,7 +2715,10 @@
               done,
               ...(h.art && typeof h.art === 'object' ? { art: h.art } : {}),
               ...(when ? { when } : {}),
-              ...(where ? { where } : {})
+              ...(where ? { where } : {}),
+              ...(String(h.petName || '').trim()
+                ? { petName: String(h.petName || '').trim().slice(0, 20) }
+                : {})
             };
           });
           const gallery = Array.isArray(raw.gallery)
@@ -2681,6 +2786,24 @@
           )
             ? raw.settings.theme
             : 'system';
+          const dismissedCarries = {};
+          if (
+            raw.dismissedCarries &&
+            typeof raw.dismissedCarries === 'object' &&
+            !Array.isArray(raw.dismissedCarries)
+          ) {
+            const cutoff = shift(today(), -8);
+            for (const [k, v] of Object.entries(raw.dismissedCarries)) {
+              if (typeof k !== 'string') continue;
+              const idx = k.indexOf('::');
+              if (idx < 0) continue;
+              const d = k.slice(0, idx);
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+              if (d < cutoff) continue;
+              if (!v) continue;
+              dismissedCarries[k] = true;
+            }
+          }
           const pets = {};
           if (raw.pets && typeof raw.pets === 'object' && !Array.isArray(raw.pets)) {
             for (const [hid, p] of Object.entries(raw.pets)) {
@@ -2702,6 +2825,7 @@
             savedQuotes,
             tasks,
             pets,
+            dismissedCarries,
             settings: { theme }
           };
         }
@@ -2752,7 +2876,20 @@
         }
         function notify(message, undo = true) {
           $('#toastText').textContent = message;
-          $('#undoBtn').classList.toggle('hidden', !undo || !undoAction);
+          const undoBtn = $('#undoBtn');
+          if (undoBtn) {
+            if (undo && undoAction) {
+              undoBtn.classList.remove('hidden');
+              undoBtn.style.display = '';
+            } else {
+              undoBtn.classList.add('hidden');
+              undoBtn.style.display = 'none';
+            }
+          }
+          const icon = document.querySelector('.toast-icon');
+          if (icon) {
+            icon.style.display = undo && undoAction ? 'inline-flex' : 'none';
+          }
           $('#toast').classList.add('show');
           clearTimeout(toastTimer);
           toastTimer = setTimeout(
@@ -2887,7 +3024,7 @@
           if (newStage !== p.stage) {
             p.stage = newStage;
             try {
-              notify(`Your creature grew to ${PET_STAGES[p.stage].name.toLowerCase()}!`, false);
+              notify(`Your companion grew to ${PET_STAGES[p.stage].name.toLowerCase()}!`, false);
             } catch (e) {}
           }
           try {
@@ -3143,12 +3280,26 @@
         // today's list. Past entries are never modified by carrying, so this is the
         // single rule that decides both what the "Bring forward" button offers and
         // what pressing it copies. Matching on both sides keeps repeated presses
-        // from stacking duplicate intentions.
+        // from stacking duplicate intentions. Explicitly deleted carried items are
+        // remembered per source day + normalized text so they don't resurface.
         function carryPending() {
           const have = new Set(
             (Array.isArray(state.tasks?.[today()]) ? state.tasks[today()] : [])
               .map(t => String(t.text || '').trim().toLowerCase())
           );
+          state.dismissedCarries = state.dismissedCarries || {};
+          const cutoff = shift(today(), -8);
+          for (const k of Object.keys(state.dismissedCarries)) {
+            const idx = k.indexOf('::');
+            if (idx < 0) {
+              delete state.dismissedCarries[k];
+              continue;
+            }
+            const d = k.slice(0, idx);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < cutoff) {
+              delete state.dismissedCarries[k];
+            }
+          }
           const candidates = [];
           const maxDays = 7;
           for (let i = 1; i <= maxDays; i++) {
@@ -3159,10 +3310,85 @@
               if (!text) continue;
               if (t.done) continue;
               if (have.has(text.toLowerCase())) continue;
+              const norm = text.toLowerCase();
+              if (state.dismissedCarries[`${key}::${norm}`]) continue;
               candidates.push({ ...t, _from: key });
             }
           }
           return candidates;
+        }
+        // The single text rule for a daily intention: trimmed and capped at the
+        // same 120 characters the add form and normalize() enforce. Used by the
+        // inline editor so an edit can never store more than a new entry.
+        function intentionText(value) {
+          return String(value == null ? '' : value)
+            .trim()
+            .slice(0, 120);
+        }
+        // Intentions are renamed in place, with no extra button: the label is
+        // both the text and the trigger (double-click, press-and-hold on touch,
+        // or Enter/F2 from the keyboard). The editor is swapped into the same
+        // slot and the commit writes the DOM directly instead of re-rendering,
+        // because a re-render during a blur would swallow the click the user
+        // was aiming at and drop the scroll position.
+        const TASK_EDIT_HOLD = 500;
+        function syncTaskRowLabels(row, text) {
+          if (!row) return;
+          const box = row.querySelector('input[type="checkbox"]');
+          if (box)
+            box.setAttribute(
+              'aria-label',
+              `Mark ${text} ${box.checked ? 'incomplete' : 'complete'}`
+            );
+          const del = row.querySelector('button[data-action="task-delete"]');
+          if (del) del.setAttribute('aria-label', `Delete task: ${text}`);
+        }
+        function beginTaskEdit(label) {
+          if (!label || label.dataset.editing === '1') return;
+          const list = Array.isArray(state.tasks?.[today()])
+            ? state.tasks[today()]
+            : [];
+          const task = list.find(t => t.id === label.dataset.taskId);
+          if (!task) return;
+          const original = String(task.text || '');
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'task-edit';
+          input.maxLength = 120;
+          input.autocomplete = 'off';
+          input.value = original;
+          input.setAttribute('aria-label', 'Edit intention');
+          label.dataset.editing = '1';
+          label.replaceWith(input);
+          input.focus();
+          input.select();
+          let settled = false;
+          const finish = (commit, keepFocus) => {
+            if (settled) return;
+            settled = true;
+            const next = commit ? intentionText(input.value) : original;
+            input.replaceWith(label);
+            delete label.dataset.editing;
+            // An empty save is treated as "no change" rather than a deletion:
+            // removing an intention stays an explicit choice via its × button.
+            if (next && next !== original) {
+              task.text = next;
+              label.textContent = next;
+              syncTaskRowLabels(label.closest('.task-row'), next);
+              save();
+            }
+            if (keepFocus) label.focus();
+          };
+          input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              finish(true, true);
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              finish(false, true);
+            }
+          });
+          input.addEventListener('blur', () => finish(true, false));
         }
         function renderTasks() {
           const list = Array.isArray(state.tasks?.[today()])
@@ -3170,9 +3396,9 @@
             : [];
           const done = list.filter(t => t.done).length;
           const carry = carryPending();
-          let html = `<div class="panel intentions"><div class="section-title" style="margin:0 0 4px"><h3>Daily intentions</h3><span class="spacer"></span><span class="task-progress">${done} of ${list.length}</span></div><p class="small-text">A few things you would like to do today. These are separate from habits—no streaks, no guilt.</p>`;
+          let html = `<div class="panel intentions"><div class="section-title" style="margin:0 0 4px"><h3>Daily intentions</h3><span class="spacer"></span><span class="task-progress">${done} of ${list.length}</span></div><p class="small-text">A few things you would like to do today. These are separate from habits—no streaks, no guilt. Double-click an intention to edit it—or press and hold on a touch screen.</p>`;
           html += list.length
-            ? `<div class="task-list">${list.map(t => `<div class="task-row ${t.done ? 'done' : ''}"><input type="checkbox" data-action="task-toggle" data-id="${esc(t.id)}" aria-label="Mark ${esc(t.text)} ${t.done ? 'incomplete' : 'complete'}" ${t.done ? 'checked' : ''}><span class="task-label">${esc(t.text)}</span><button type="button" data-action="task-delete" data-id="${esc(t.id)}" aria-label="Delete task: ${esc(t.text)}" title="Delete task">×</button></div>`).join('')}</div>`
+            ? `<div class="task-list">${list.map(t => `<div class="task-row ${t.done ? 'done' : ''}"><input type="checkbox" data-action="task-toggle" data-id="${esc(t.id)}" aria-label="Mark ${esc(t.text)} ${t.done ? 'incomplete' : 'complete'}" ${t.done ? 'checked' : ''}><span class="task-label" data-task-id="${esc(t.id)}" tabindex="0" title="Double-click to edit">${esc(t.text)}</span><button type="button" data-action="task-delete" data-id="${esc(t.id)}" aria-label="Delete task: ${esc(t.text)}" title="Delete task">×</button></div>`).join('')}</div>`
             : `<div class="empty" style="padding:18px;margin-top:12px"><div class="emoji">☀️</div><strong>No tasks for today</strong><p>Add one small intention if it would help. You can also leave this section empty.</p></div>`;
           html += `<form id="taskForm" class="task-add"><input id="taskInput" type="text" maxlength="120" autocomplete="off" placeholder="Add a small intention…" aria-label="New daily intention"><button class="btn primary" type="submit">Add</button></form>`;
           html += `<p id="taskHint" class="small-text task-hint hidden"></p><span id="taskLimitStatus" class="sr-only" role="status"></span>`;
@@ -3377,9 +3603,9 @@
           if (insightView === 'habitat')
             return (
               pageHead(
-                'Your tank',
+                'Your companions',
                 'Habitat',
-                'Nurture your creatures with each completed day. They grow over time, with no penalty for rest days.'
+                'Each habit has a companion that grows alongside it. Complete scheduled days to help yours grow; rest days never set them back.'
               ) +
               switcher +
               renderHabitat()
@@ -3535,8 +3761,8 @@
         function renderHabitat() {
           if (!state.habits.length)
             return empty(
-              'Your tank starts with a habit',
-              'Create a habit and your creatures will grow as you complete scheduled days.'
+              'Your companions start with a habit',
+              'Create a habit and a companion will join you, growing as you complete scheduled days.'
             );
           const total = state.habits.length;
           const zooShown = Math.min(total, ZOO_MAX);
@@ -3547,12 +3773,21 @@
             `<button type="button" data-habitat-mode="cards" role="tab" aria-selected="${habitatMode === 'cards'}" class="${habitatMode === 'cards' ? 'active' : ''}">Cards (${total})</button>` +
             `</div>` +
             `<span class="grow"></span>` +
-            `<span class="small-text muted">${habitatMode === 'zoo' ? (zooShown < total ? `Showing first ${zooShown} in scene; rest appear in Cards.` : 'All creatures in the scene.') : 'All creatures shown as cards.'}</span>` +
+            `<span class="small-text muted">${habitatMode === 'zoo' ? (zooShown < total ? `Showing the first ${zooShown} companions in the scene; the rest appear in Cards.` : 'All companions are in the scene.') : 'All companions shown as cards.'}</span>` +
             `</div>`;
           const body = habitatMode === 'zoo' ? renderZoo() : renderHabitatCards();
-          return header + body;
+          const unnamed = state.habits.some(h => !String(h.petName || '').trim());
+          const nameHint =
+            unnamed && habitatMode === 'zoo'
+              ? `<p class="small-text muted" style="margin:0 0 var(--sp-3)">Companions without a name use their habit's name. You can name one while editing the habit.</p>`
+              : '';
+          return header + nameHint + body;
         }
 
+        function petDisplayName(h) {
+          const n = String(h.petName || '').trim();
+          return n || h.name;
+        }
         function renderZoo() {
           const rnd = (id, salt) => {
             let h = (2166136261 ^ salt) >>> 0;
@@ -3569,7 +3804,8 @@
             .map(h => {
               const p = ensurePet(h.id),
                 kind = ['fish', 'snail', 'plant'].includes(p.species) ? p.species : 'fish',
-                r = n => rnd(h.id, n);
+                r = n => rnd(h.id, n),
+                pname = petDisplayName(h);
               let size, x0, x1, t, place, z;
               if (kind === 'fish') {
                 size = 40 + p.stage * 10;
@@ -3596,14 +3832,18 @@
                 plantIndex++;
               }
               const done = eligible(h) && completed(h, today());
+              const named = String(h.petName || '').trim();
+              const tagLabel = named
+                ? `Open details for ${h.name}. Companion: ${pname}.`
+                : `Open details for ${h.name}.`;
               const style =
                 `--x0:${x0.toFixed(1)}%;--x1:${x1.toFixed(1)}%;${place};--t:${t.toFixed(1)}s;` +
                 `--d:${(-r(5) * 2 * t).toFixed(1)}s;--bt:${(3 + r(6) * 3).toFixed(1)}s;--s:${size}px;--z:${z}`;
               return (
-                `<button type="button" class="zoo-actor kind-${kind}" data-action="zoo-open" data-id="${esc(h.id)}" style="${style}" ` +
-                `aria-label="${esc(h.name)}, ${PET_STAGES[p.stage].name}. Show its card.">` +
-                `<span class="zoo-tag${done ? ' done' : ''}">${esc(h.icon)} ${esc(h.name)}${done ? ' ✓' : ''}</span>` +
-                `<span class="zoo-flip"><span class="zoo-bob">${petSvg(kind, p.stage)}</span></span></button>`
+                `<div class="zoo-actor kind-${kind}" style="${style}">` +
+                `<button type="button" class="zoo-tag${done ? ' done' : ''}" data-action="zoo-open" data-id="${esc(h.id)}" aria-label="${esc(tagLabel)}">${esc(h.icon)} ${esc(pname)}${done ? ' ✓' : ''}</button>` +
+                `<div class="zoo-body" aria-hidden="true">` +
+                `<span class="zoo-flip"><span class="zoo-bob">${petSvg(kind, p.stage)}</span></span></div></div>`
               );
             })
             .join('');
@@ -3619,14 +3859,14 @@
           const due = habits.filter(h => eligible(h)),
             careDone = due.filter(h => completed(h, today())).length;
           return (
-            `<div class="small-text muted" style="margin:0 0 var(--sp-2)">${careDone} of ${due.length} habits cared for today. Tap a creature to open its card.</div>` +
-            `<div class="zoo" role="group" aria-label="Habitat with your creatures"><div class="zoo-water">${weeds}<div class="zoo-bubbles" aria-hidden="true">${bubbles}</div></div><div class="zoo-ground" aria-hidden="true"></div>${actors}</div>`
+            `<div class="small-text muted" style="margin:0 0 var(--sp-2)">${careDone} of ${due.length} habits cared for today. Tap a companion tag to open its habit card.</div>` +
+            `<div class="zoo" role="group" aria-label="Habitat with your companions"><div class="zoo-water">${weeds}<div class="zoo-bubbles" aria-hidden="true">${bubbles}</div></div><div class="zoo-ground" aria-hidden="true"></div>${actors}</div>`
           );
         }
 
         function renderHabitatCards() {
           state.pets = state.pets || {};
-          let html = `<div class="panel" style="background:linear-gradient(180deg, color-mix(in srgb, #64b5f6 12%, var(--card)) 0%, var(--card) 100%);"><h3>Habitat</h3><p class="small-text">Each creature grows with completed scheduled days. Missed or rest days never shrink them.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--sp-4);margin-top:var(--sp-4)">${state.habits
+          let html = `<div class="panel" style="background:linear-gradient(180deg, color-mix(in srgb, #64b5f6 12%, var(--card)) 0%, var(--card) 100%);"><h3>Your companions</h3><p class="small-text">Each companion grows with completed scheduled days. Missed or rest days never shrink them—they are here to keep you company, not to judge.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--sp-4);margin-top:var(--sp-4)">${state.habits
             .map(h => {
               const p = ensurePet(h.id);
               const stage = PET_STAGES[p.stage];
@@ -3634,7 +3874,9 @@
               const xp = p.xp;
               const need = next ? next.xp - xp : 0;
               const pctXp = next ? Math.min(100, Math.round((100 * (xp - stage.xp)) / Math.max(1, next.xp - stage.xp))) : 100;
-              return `<div class="art-card" id="pet-card-${esc(h.id)}" tabindex="-1" style="text-align:center"><div style="width:80px;height:80px;margin:0 auto 10px">${petSvg(p.species, p.stage)}</div><h4>${esc(h.icon)} ${esc(h.name)}</h4><p>${stage.name} · ${xp} care points</p>${next ? `<div class="track" style="margin:8px auto;max-width:160px"><span style="width:${pctXp}%"></span></div><p class="small-text">${need} more to reach ${next.name}</p>` : `<p class="small-text">Fully grown — keep up the gentle care.</p>`}</div>`;
+              const pname = petDisplayName(h);
+              const context = pname === h.name ? '' : `<span class="small-text">for ${esc(h.name)}</span>`;
+              return `<div class="art-card" id="pet-card-${esc(h.id)}" tabindex="-1" style="text-align:center"><div class="pet-btn" aria-hidden="true">${petSvg(p.species, p.stage)}</div><h4>${esc(h.icon)} ${esc(pname)}</h4><p class="small-text" style="margin:2px 0 4px">${context}${context ? ' · ' : ''}${stage.name} · ${xp} care points</p>${next ? `<div class="track" style="margin:8px auto;max-width:160px"><span style="width:${pctXp}%"></span></div><p class="small-text">${need} more to reach ${next.name}</p>` : `<p class="small-text">Fully grown — keep up the gentle care.</p>`}<div class="card-actions" style="justify-content:center"><button type="button" class="btn small" data-action="zoo-open" data-id="${esc(h.id)}">Open habit card</button></div></div>`;
             })
             .join('')}</div></div>`;
           return html;
@@ -3766,6 +4008,59 @@
             wireJournal();
           }
           if (activePage === 'today') {
+            root.querySelectorAll('.task-label[data-task-id]').forEach(label => {
+              label.addEventListener('dblclick', () => beginTaskEdit(label));
+              label.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === 'F2') {
+                  e.preventDefault();
+                  beginTaskEdit(label);
+                }
+              });
+              // Touch has no dependable double-click. A short hold opens the
+              // editor instead, and any movement cancels it so starting a
+              // scroll on the text still scrolls the page.
+              let holdTimer = null,
+                startX = 0,
+                startY = 0,
+                touchPointer = false;
+              const cancelHold = () => {
+                if (holdTimer !== null) {
+                  clearTimeout(holdTimer);
+                  holdTimer = null;
+                }
+              };
+              const stopTouch = () => {
+                touchPointer = false;
+                cancelHold();
+              };
+              label.addEventListener('pointerdown', e => {
+                if (e.pointerType === 'mouse') return;
+                touchPointer = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                cancelHold();
+                holdTimer = setTimeout(() => {
+                  holdTimer = null;
+                  beginTaskEdit(label);
+                }, TASK_EDIT_HOLD);
+              });
+              label.addEventListener('pointermove', e => {
+                if (holdTimer === null) return;
+                if (
+                  Math.abs(e.clientX - startX) > 8 ||
+                  Math.abs(e.clientY - startY) > 8
+                )
+                  cancelHold();
+              });
+              label.addEventListener('pointerup', stopTouch);
+              label.addEventListener('pointercancel', stopTouch);
+              label.addEventListener('pointerleave', cancelHold);
+              // The hold must not also open the OS selection/callout sheet.
+              // A mouse keeps its context menu so the text stays copyable.
+              label.addEventListener('contextmenu', e => {
+                if (touchPointer) e.preventDefault();
+              });
+            });
             const form = $('#taskForm');
             // Character-limit feedback for intentions: a quiet counter appears
             // as the input nears its 120-character cap, and the cap itself is
@@ -3824,6 +4119,7 @@
           const h = state.habits.find(x => x.id === id);
           $('#dialogTitle').textContent = h ? 'Edit habit' : 'Create a habit';
           $('#habitName').value = h?.name || '';
+          $('#petName').value = h?.petName || '';
           $('#habitWhen').value = h?.when || '';
           $('#habitWhere').value = h?.where || '';
           $('#habitGoal').value = h ? goal(h) : 1;
@@ -3901,6 +4197,7 @@
             start = $('#habitStart').value,
             when = $('#habitWhen').value.replace(/\s+/g, ' ').trim().slice(0, 60),
             where = $('#habitWhere').value.replace(/\s+/g, ' ').trim().slice(0, 60),
+            petName = $('#petName').value.replace(/\s+/g, ' ').trim().slice(0, 20),
             category =
               $('#habitCategory').value === '__custom__'
                 ? $('#customCategory').value.trim()
@@ -3937,6 +4234,8 @@
             else delete h.when;
             if (where) h.where = where;
             else delete h.where;
+            if (petName) h.petName = petName;
+            else delete h.petName;
           } else
             state.habits.push({
               id: `h${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
@@ -3949,7 +4248,8 @@
               color: pickedColor,
               done: {},
               ...(when ? { when } : {}),
-              ...(where ? { where } : {})
+              ...(where ? { where } : {}),
+              ...(petName ? { petName } : {})
             });
           save();
           $('#habitDialog').close();
@@ -4108,6 +4408,26 @@
               idx = list.findIndex(t => t.id === id);
             if (idx >= 0) {
               const removed = list.splice(idx, 1)[0];
+              if (removed && removed.text) {
+                state.dismissedCarries = state.dismissedCarries || {};
+                const norm = String(removed.text || '').trim().toLowerCase();
+                if (norm) {
+                  const maxDays = 7;
+                  for (let i = 1; i <= maxDays; i++) {
+                    const key = shift(today(), -i);
+                    if (Array.isArray(state.tasks?.[key])) {
+                      const found = state.tasks[key].some(
+                        t =>
+                          !t.done &&
+                          String(t.text || '').trim().toLowerCase() === norm
+                      );
+                      if (found) {
+                        state.dismissedCarries[`${key}::${norm}`] = true;
+                      }
+                    }
+                  }
+                }
+              }
               if (!list.length) delete state.tasks[today()];
               save();
               render();
@@ -4119,6 +4439,22 @@
                   0,
                   removed
                 );
+                if (removed && removed.text) {
+                  state.dismissedCarries = state.dismissedCarries || {};
+                  const norm = String(removed.text || '').trim().toLowerCase();
+                  if (norm) {
+                    const maxDays = 7;
+                    for (let i = 1; i <= maxDays; i++) {
+                      const key = shift(today(), -i);
+                      const dk = `${key}::${norm}`;
+                      if (state.dismissedCarries[dk]) {
+                        delete state.dismissedCarries[dk];
+                      }
+                    }
+                  }
+                }
+                save();
+                render();
               });
             }
             return;
@@ -4215,7 +4551,7 @@
           if (action === 'clear') {
             const ok = await openConfirm(
               'Delete all local data?',
-              `This permanently removes ${state.habits.length} habit(s), all history, journal entries, saved quotes, daily intentions, habitat pets, and gallery data from this browser. Export a backup first if you may want it later.`,
+              `This permanently removes ${state.habits.length} habit(s), all history, journal entries, saved quotes, daily intentions, habitat companions, and gallery data from this browser. Export a backup first if you may want it later.`,
               'Delete everything'
             );
             if (ok) {
