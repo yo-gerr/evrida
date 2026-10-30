@@ -307,7 +307,7 @@ The Today dashboard also holds a short list of daily intentions. They are separa
 
 To rename an intention, double-click its text. On a touch screen, press and hold instead; keyboard users focus the text and press Enter or F2. Enter or clicking elsewhere saves the edit, Escape cancels it, and saving an empty field keeps the previous text — removing an item stays an explicit choice through **×**. Edits obey the same trim and 120-character limit as a new intention.
 
-Unfinished intentions from up to the previous seven days can be brought forward with **Bring forward**, subject to the 100-per-day limit. Bringing them forward copies them into today; it never rewrites the earlier day.
+Unfinished intentions from up to the previous seven days can be brought forward with **Bring forward**, subject to the 100-per-day limit. Matching text repeated across different days is offered once, using its most recent unfinished copy; repeated intentions from the same day remain separate. Bringing them forward copies them into today; it never rewrites the earlier day. Adding an intention does not bring forward past items.
 
 ### Review trends
 

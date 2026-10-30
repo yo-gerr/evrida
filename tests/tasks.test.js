@@ -116,6 +116,29 @@ test('carryPending keeps duplicate texts from yesterday on the first press', (t)
   assert.equal(carryPending().length, 2);
 });
 
+test('carryPending only carries matching text once across different days', (t) => {
+  setToday(t, 2026, 1, 15);
+  const twoDaysAgo = '2026-01-13';
+  setTasks({
+    [twoDaysAgo]: [
+      { id: 'older', text: 'Write a note', done: false },
+      { id: 'distinct', text: 'Take a walk', done: false },
+    ],
+    [yesterdayKey]: [
+      { id: 'newer', text: '  write a note  ', done: false },
+    ],
+  });
+
+  const pending = carryPending();
+  assert.deepEqual(
+    pending.map(({ text, _from }) => ({ text, _from })),
+    [
+      { text: '  write a note  ', _from: yesterdayKey },
+      { text: 'Take a walk', _from: twoDaysAgo },
+    ]
+  );
+});
+
 // --- Inline rename text rule ------------------------------------------------
 // The label editor commits through intentionText(), so an edit obeys exactly
 // the same limits as a newly added intention.

@@ -3277,13 +3277,12 @@
           return `<section class="quote-card" aria-label="Daily inspiration"><p class="quote-text">${esc(q.text)}</p><div class="quote-author">— ${esc(q.author)}</div><div class="card-actions"><button data-action="save-quote" data-quote="${idx}" aria-pressed="${saved}">${saved ? '♥ Saved' : '♡ Save quote'}</button><span class="grow"></span><button data-page="journal">Journal &amp; reflections →</button></div></section>`;
         }
         // Unfinished intentions from the last few days that are not already present in
-        // today's list. Past entries are never modified by carrying, so this is the
-        // single rule that decides both what the "Bring forward" button offers and
-        // what pressing it copies. Matching on both sides keeps repeated presses
-        // from stacking duplicate intentions. Explicitly deleted carried items are
+        // today's list. Matching text from different days is carried only once,
+        // preferring the newest day; same-day duplicates remain separate. Past
+        // entries are never modified by carrying. Explicitly deleted carried items are
         // remembered per source day + normalized text so they don't resurface.
         function carryPending() {
-          const have = new Set(
+          const seen = new Set(
             (Array.isArray(state.tasks?.[today()]) ? state.tasks[today()] : [])
               .map(t => String(t.text || '').trim().toLowerCase())
           );
@@ -3305,15 +3304,18 @@
           for (let i = 1; i <= maxDays; i++) {
             const key = shift(today(), -i);
             if (!Array.isArray(state.tasks?.[key])) continue;
+            const foundOnDate = new Set();
             for (const t of state.tasks[key]) {
               const text = String(t.text || '').trim();
               if (!text) continue;
               if (t.done) continue;
-              if (have.has(text.toLowerCase())) continue;
               const norm = text.toLowerCase();
+              if (seen.has(norm)) continue;
               if (state.dismissedCarries[`${key}::${norm}`]) continue;
               candidates.push({ ...t, _from: key });
+              foundOnDate.add(norm);
             }
+            for (const text of foundOnDate) seen.add(text);
           }
           return candidates;
         }
