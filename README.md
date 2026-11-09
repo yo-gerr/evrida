@@ -2,7 +2,7 @@
 
 > **Every day, a little more you.**
 
-Evrida is a free, private, local-first habit tracker and personal-growth journal delivered as a single HTML file. It helps people build routines, record small daily intentions, reflect through journaling, and review progress over time—without turning consistency into a source of guilt.
+Evrida is a free, private, local-first habit tracker and personal-growth journal delivered as a small set of static files (no build step required). It helps people build routines, record small daily intentions, reflect through journaling, and review progress over time—without turning consistency into a source of guilt.
 
 Evrida is designed to run directly in a modern web browser. It does not require an account, server, build process, package manager, database service, analytics SDK, or third-party font request.
 
@@ -37,8 +37,9 @@ Evrida is designed to run directly in a modern web browser. It does not require 
 
 Evrida brings several lightweight personal-growth tools together in one place:
 
-- Track habits with daily targets and custom schedules.
+- Track habits with daily targets and custom schedules, by count or by minutes and hours.
 - Record partial progress as well as completed goals.
+- Work in Pomodoro focus blocks and keep a private, Steam-style library of time invested.
 - Review historical activity and watch a companion grow alongside each habit.
 - Explore completion trends and streaks without treating them as a judgment.
 - Write optional journal entries and track a simple mood.
@@ -48,7 +49,7 @@ Evrida brings several lightweight personal-growth tools together in one place:
 - Export and import a JSON backup.
 - Install to a home screen and keep working offline when served over HTTPS.
 
-The project intentionally favors a portable, understandable implementation over a large framework. The current application is a self-contained `index.html` document with its HTML, CSS, and JavaScript in the same file. Small companion assets (`manifest.webmanifest`, `sw.js`, and `icons/`) add optional installation and offline use without changing that model — the app itself remains one file, and `file://` use is unaffected.
+The project intentionally favors a portable, understandable implementation over a large framework. The current application is a small set of static files with no build step: `index.html` is the HTML shell, `styles.css` holds application CSS, `app.js` holds logic, and `graphics.css` / `graphics.js` hold companion artwork. Small PWA assets (`manifest.webmanifest`, `sw.js`, and `icons/`) add optional installation and offline use without changing that model, and `file://` use is unaffected.
 
 ### Intended audience
 
@@ -56,7 +57,7 @@ People who want a private, low-friction way to keep track of habits and reflect 
 
 ### Product status
 
-This README documents the current single-file implementation. It does not imply that features such as cloud synchronization, user accounts, encryption, automated reminders, or cross-device sync exist.
+This README documents the current static-file implementation. It does not imply that features such as cloud synchronization, user accounts, encryption, automated reminders, or cross-device sync exist.
 
 ---
 
@@ -95,7 +96,7 @@ Each habit can include:
 
 - Name (up to 60 characters).
 - An optional "when" and "where" (up to 60 characters each) — implementation intentions such as "after lunch" and "at my desk", composed on cards into a sentence: "I will read 10 pages after lunch at my desk."
-- Daily target (integer from 1 to 99).
+- A **Track by** type: **Count** (reps, pages, glasses) or **Time** (minutes and hours). Count habits use a daily target from 1 to 99; time habits use a daily target in minutes from 1 to 600 (10 hours).
 - Start date, not later than today.
 - Category, including a custom category.
 - Scheduled weekdays.
@@ -111,9 +112,9 @@ Habit creation requires at least one scheduled weekday. A day before the habit's
 
 Deleting a habit removes that habit and its associated completion history from the current local dataset. Confirm destructive actions and preserve the app's undo behavior where it is available.
 
-### 3. History and heatmaps
+### 3. History and heatmaps (within Insights)
 
-The History area presents habit history and allows users to inspect prior dates. Progress is represented in a calendar-style grid of day cells:
+History is available as a tab within Insights. It presents habit history and allows users to inspect prior dates. Progress is represented in a calendar-style grid of day cells:
 
 - A filled cell indicates the daily target was reached.
 - A lighter filled cell indicates progress was recorded but the target was not reached.
@@ -128,18 +129,35 @@ Avoid presenting rest days or unscheduled days as failures.
 
 ### 4. Insights
 
-Insights has two views, selected with a Trends / Habitat switcher under the page title:
+Insights has three tabs, selected with a switcher under the page title:
 
 - **Trends** summarizes progress over a selectable time period and category. Depending on the selected filters, the view includes completion rates, scheduled/completed day counts, habit-level comparisons, and streak information.
+- **History** presents a calendar-style heatmap of each habit's completion history, from its start date through today plus the next 14 days for planning.
 - **Habitat** is a gentle shared tank where every habit has a companion (fish, snail, or plant). A companion grows as you complete scheduled days, gains care points over time, and progresses through egg, fry, juvenile, and adult stages. Missed or rest days never shrink them, and there are no leaderboards. Each companion can have a name of its own; without one, its habit's name is shown instead. Companions never earn progress from being poked—only real completed days move them forward.
 
 The selected view is session-only and is not persisted or included in backups. Moving to Insights from the navigation resets to Trends so the page never opens on a stale view.
 
 These values are descriptive aids, not grades. When changing calculations, account for the habit's start date, scheduled weekdays, partial completions, and the current date.
 
-### 5. Journal
+### 5. Focus, Pomodoro, and time habits
 
-Journal entries are optional and stored locally. A dated entry can contain:
+Focus is the home for time-based habits. A habit created with **Track by → Time** stores its daily progress in minutes, and the Focus page is its primary input method. Count habits keep their tap-and-hold counter and are not shown in the Focus picker; the two types share the same completion, streak, heatmap, and companion calculations because both write an integer into `done[date]`.
+
+The Pomodoro timer includes:
+
+- Focus, short-break, and long-break modes. Defaults are 25 / 5 / 15 minutes, with a long break after every 4 focus blocks; all four values are editable in Timer settings.
+- A circular countdown ring, Start / Pause / Reset, and a habit picker. Only time habits are listed; choosing "No habit — just track time" logs the minutes without crediting a habit.
+- A soft chime when a block ends (WebAudio, generated locally; can be turned off). No external audio file or network request is used.
+- Session persistence through the `streakgrid-timer` localStorage key. If the page is reloaded or backgrounded mid-session, the timer recomputes from the wall clock and credits a completed block once.
+- Manual time entry (habit, date, minutes, optional note) for sessions you forgot to time.
+
+A completed focus block adds its configured minutes to the selected habit for today, records a session, and awards companion care points if that reaches the daily goal. Breaking a block early does not log time; use manual entry for partial sessions. A block that finishes while the tab is closed is credited once on the next load.
+
+The **time library** presents time habits like a game library: total hours invested, hours in the last 7 days, focus-session count, per-habit hours, session counts, "last played" dates, a 14-day sparkline of minutes, and quiet 10/50/100-hour milestones. Hours are a record of effort, not a score; there are no leaderboards.
+
+### 6. Journal (within Settings)
+
+Journal entries are optional and stored locally. Journal is accessed from the Settings page. A dated entry can contain:
 
 - A free-form note (up to 5,000 characters).
 - What went well (up to 1,500 characters).
@@ -151,17 +169,17 @@ Users can select an entry date, search saved entries, reopen an entry, clear an 
 
 Journal content is personal information. The interface must continue to explain that local browser storage is not encrypted by default and can be read by someone with access to the same browser profile or device.
 
-### 6. Navigation
+### 7. Navigation
 
-Evrida has six destinations: Today, Habits, History, Insights, Journal, and Settings. They fall into three groups:
+Evrida has five destinations: Today, Habits, Insights, Focus, and Settings. They fall into three groups:
 
-- **Daily loop:** Today, Habits, Journal.
-- **Review:** History, Insights (which contains the Habitat).
-- **Configuration:** Settings.
+- **Daily loop:** Today, Habits.
+- **Review & focus:** Insights (which contains Trends, History, and the Habitat), Focus.
+- **Configuration:** Settings (which contains Journal).
 
-The desktop top navigation lists all six. The mobile bottom bar lists the five highest-frequency destinations — Today, Habits, Insights, Journal, and Settings — so each label keeps enough width to read without clipping on a narrow phone. History drops off the mobile bar and stays reachable from every habit card's History button, which opens the full all-habits timeline. The tightened bar is a presentation-only choice: no destination is removed, and no state, backup, or schema behavior depends on the navigation structure.
+The desktop top navigation lists all five. The mobile bottom bar lists the same five, so each label keeps enough width to read without clipping on a narrow phone. History is now a tab within Insights rather than a standalone destination, and Journal lives within Settings. This keeps the navigation strip uncluttered while preserving access to every feature. History remains reachable from every habit card's History button, which opens the full all-habits timeline within Insights.
 
-### 7. Appearance
+### 8. Appearance
 
 The appearance setting supports:
 
@@ -171,7 +189,7 @@ The appearance setting supports:
 
 Theme styles are implemented with CSS custom properties and the document's `data-theme` attribute. Keep both explicit themes and system preference behavior working when updating the UI. Selecting System resolves the actual preference at load time and updates the browser `theme-color` meta accordingly; the light theme uses a warm ivory background and the dark theme a green-tinted charcoal.
 
-### 8. Backup and restore
+### 9. Backup and restore
 
 - Export downloads a JSON backup named `evrida-backup-YYYY-MM-DD.json`.
 - The exported object includes the app identifier (`app: "Evrida"`), an export timestamp, and application state.
@@ -181,11 +199,11 @@ Theme styles are implemented with CSS custom properties and the document's `data
 
 Users should keep backups somewhere separate from the browser profile. A backup may contain sensitive journal content and should be protected accordingly.
 
-### 9. Delete local data and undo
+### 10. Delete local data and undo
 
 Settings includes a destructive action to remove local application data after confirmation. The app also provides an undo mechanism for supported actions, such as some habit-progress changes, habit deletion, intention removal, and clearing local data. Undo availability is action-specific; do not promise that every action can be undone.
 
-### 10. Install and offline use
+### 11. Install and offline use
 
 - A web app manifest (`manifest.webmanifest`) and service worker (`sw.js`) make Evrida installable to a phone's home screen or desktop, opening in its own standalone window without browser chrome.
 - After the first visit over HTTP(S), the app shell (page, styles, script, icons) is cached so Evrida opens even with no network connection.
@@ -202,8 +220,8 @@ Settings includes a destructive action to remove local application data after co
 | Area | Current implementation |
 |---|---|
 | Markup | HTML5 |
-| Styling | Inline CSS in `index.html` |
-| Application logic | Vanilla JavaScript in `index.html` |
+| Styling | Vanilla CSS in `styles.css` (plus `graphics.css`) |
+| Application logic | Vanilla JavaScript in `app.js` (plus `graphics.js`) |
 | Persistence | Browser `localStorage` |
 | Import/export | JSON, `Blob`, object URLs, browser file input |
 | Dialogs | Native HTML `<dialog>` elements |
@@ -231,7 +249,9 @@ The application is an immediately invoked JavaScript function. Its main state is
 The current implementation includes these concepts:
 
 - `KEY`: localStorage key. It is currently `streakgrid` for backward compatibility with earlier versions.
-- `VERSION`: current persisted schema version, currently `8`.
+- `TIMER_KEY`: separate localStorage key for resumable Focus timer state (`streakgrid-timer`). It holds only timer mode, habit id, and timing, never habit or journal content.
+- `VERSION`: current persisted schema version, currently `10`.
+- `FOCUS_DEFAULTS`, `MILESTONES`: default Pomodoro durations and the quiet hour milestones shown in the time library.
 - `CATEGORIES`, `COLORS`, `EMOJIS`, `DAYS`, `NAV`, and `QUOTES`: application configuration and built-in content.
 
 Do not rename the storage key merely because the product has been rebranded. Doing so can make existing data appear to have disappeared. If the key is ever changed, implement a tested migration that reads the previous key and preserves data.
@@ -247,7 +267,7 @@ Use a modern browser with support for the APIs and CSS used by the application, 
 ### Option A: Open the file directly
 
 1. Download or clone the project files.
-2. Keep `index.html` in a local folder.
+2. Keep `index.html`, `styles.css`, `app.js`, `graphics.css`, and `graphics.js` together in one folder (plus `manifest.webmanifest`, `sw.js`, and `icons/` for installation).
 3. Open `index.html` in a modern browser.
 4. Create a habit and try recording progress.
 5. Export a backup before clearing browser data or moving to another device.
@@ -268,7 +288,7 @@ This command is only a development convenience; Python is not an application dep
 
 ### Option C: Host as a static page
 
-The file can be deployed to a static web host. There is no backend to deploy. The project ships as `index.html`, which static hosts serve by default at the site root. If you prefer a different filename such as `Evrida.html`, rename or copy the file and configure the host accordingly.
+The files can be deployed to a static web host. There is no backend to deploy. Upload `index.html` together with `styles.css`, `app.js`, `graphics.css`, and `graphics.js`; static hosts serve `index.html` by default at the site root. If you prefer a different filename such as `Evrida.html`, rename or copy it and configure the host accordingly.
 
 **Important:** browser storage is origin-specific. Data saved when opening a `file://` URL may not be available when opening the app from `http://localhost`, a different port, or a deployed domain. Export a backup before changing the app's origin, then import it from the new origin.
 
@@ -284,12 +304,13 @@ When the page is served over HTTPS or `localhost`, upload `manifest.webmanifest`
 2. Enter a descriptive name — this becomes the behavior in the commitment sentence.
 3. Optionally give the habit a **Companion name**, the name of the companion that will accompany this habit in the Habitat. If left empty, the habit name is used.
 4. Optionally name **When?** and **Where?**, for example "after lunch" and "at my desk". A trigger works as a when: "after I brush my teeth."
-5. Set the daily target.
-6. Select the start date.
-7. Choose a category or enter a custom category.
-8. Select one or more weekdays.
-9. Choose an emoji and color.
-10. Save the habit.
+5. Choose **Track by**: **Count** for reps, pages, or glasses, or **Time** for minutes and hours.
+6. Set the daily target. Count habits accept 1–99; time habits accept 1–600 minutes (60 = one hour).
+7. Select the start date.
+8. Choose a category or enter a custom category.
+9. Select one or more weekdays.
+10. Choose an emoji and color.
+11. Save the habit.
 
 When, where, and the habit name are combined on the habit card into a display-only sentence — *"I will read 10 pages after lunch at my desk"* — built from whichever parts you fill in and never stored as generated text. The fields are optional planning prompts grounded in implementation-intention research, never reminders or notifications, and they do not affect scheduling, streaks, or insights. Habits created before this feature are unaffected; an earlier single "when and where" note is migrated into the **When?** field.
 
@@ -299,7 +320,13 @@ Prefer small, measurable targets. For example, “Read 10 pages” is more actio
 
 ### Record progress
 
-Tap a habit's counter to add one toward its daily target; the counter shows the current count, for example `3/5`. Press and hold the counter to subtract one — useful for correcting an accidental tap — and hold long enough only to trigger one decrement. Quick double-taps are ignored, taps stop at the daily target, and a toast with an Undo button follows every change. Keyboard users press Enter to add one and Shift+Enter to subtract one. Progress cannot be recorded for future dates or dates before the habit's start date.
+For **count** habits, tap the counter to add one toward its daily target; the counter shows the current count, for example `3/5`. Press and hold the counter to subtract one — useful for correcting an accidental tap — and hold long enough only to trigger one decrement. Quick double-taps are ignored, taps stop at the daily target, and a toast with an Undo button follows every change. Keyboard users press Enter to add one and Shift+Enter to subtract one. Progress cannot be recorded for future dates or dates before the habit's start date.
+
+For **time** habits, the card shows minutes or hours (for example `45m/1h`) and opens the Focus page when clicked. Complete a focus block there to add its minutes, or use **Log time manually** to add a past session. The same future-date and start-date restrictions apply.
+
+### Focus and Pomodoro
+
+Open **Focus** from the navigation. Choose a time habit (or track unassigned time), pick Focus, short break, or long break, and press Start. When a focus block completes, its configured minutes are added to the selected habit for today and a chime plays if sound is enabled. The timer keeps running across page changes; if you reload or background the tab, it recomputes from the clock and credits a finished block once. Breaking a block early does not log time — use manual entry for partial sessions. Timer lengths, the long-break interval, and sound are editable under **Timer settings**, and nothing is sent off the device.
 
 ### Daily intentions
 
@@ -311,7 +338,7 @@ Unfinished intentions from up to the previous seven days can be brought forward 
 
 ### Review trends
 
-Use History to inspect individual dates, Insights → Trends to compare completion patterns, and Insights → Habitat to visit your companions. Interpret metrics in context: new habits and intentionally infrequent schedules can have different-looking rates.
+Use Insights → History to inspect individual dates, Insights → Trends to compare completion patterns, and Insights → Habitat to visit your companions. Interpret metrics in context: new habits and intentionally infrequent schedules can have different-looking rates.
 
 ### Journal
 
@@ -410,15 +437,17 @@ The following describes the current logical state. It is documentation for the c
 
 | Property | Purpose |
 |---|---|
-| `version` | Persisted schema version (`9` in the current build) |
+| `version` | Persisted schema version (`10` in the current build) |
 | `habits` | Array of habit records |
 | `gallery` | Array of optional gallery-related records retained by normalization |
 | `journal` | Object keyed by date (`YYYY-MM-DD`) |
 | `savedQuotes` | Array of indexes into the built-in quote list |
 | `tasks` | Object keyed by date; each value is a daily intention list |
+| `sessions` | Array of logged focus/manual time sessions |
 | `pets` | Object keyed by habit id; each value holds companion progress (`xp`, `stage`, `species`) |
 | `dismissedCarries` | Object of `date::intention-text` keys remembering intentions the user deleted, so "Bring forward" does not resurface them. Pruned to the last week during normalization |
 | `settings.theme` | `system`, `light`, or `dark` |
+| `settings.focus` | Pomodoro configuration: `focus` (1–180 minutes), `short` (1–60), `long` (1–90), `every` (2–8 focus blocks between long breaks), and `sound` (boolean). Defaults are 25 / 5 / 15 / 4 / true |
 
 Exports additionally include `app` and `exportedAt` metadata.
 
@@ -429,7 +458,8 @@ Exports additionally include `app` and `exportedAt` metadata.
 | `id` | Local record identifier |
 | `name` | Display name |
 | `category` | Built-in or custom category |
-| `goal` | Daily target from 1 to 99 |
+| `goal` | Daily target. Count habits use 1–99; time habits use 1–600 minutes |
+| `unit` | Optional. Omitted for count habits; `minutes` for time habits. Time habit `done` values are minutes, not reps |
 | `start` | Start date (`YYYY-MM-DD`) |
 | `days` | Scheduled weekdays, represented as integers `0`–`6` (Sunday–Saturday) |
 | `icon` | Emoji selected from the fixed built-in icon list; a value outside that list is reset to the first icon during normalization, so the list only ever grows by appending |
@@ -440,7 +470,9 @@ Exports additionally include `app` and `exportedAt` metadata.
 | `petName` | Optional companion name — free text up to 20 characters, shown as the companion's label in the Habitat. Omitted when empty, in which case the habit's `name` is displayed |
 | `art` | Optional legacy/additional object retained when present by normalization |
 
-A completion count is capped at 999 during normalization and normal interaction. A date only contributes to scheduled-day metrics when it is on or after the start date and matches the habit's schedule.
+A completion count is capped at 999 during normalization and normal interaction. For time habits the same `done` slot stores minutes, also capped at 999 per day, and a focus block or manual entry adds to it. A date only contributes to scheduled-day metrics when it is on or after the start date and matches the habit's schedule.
+
+Each `sessions` entry contains `id`, `habitId` (empty for unassigned time), `date`, `minutes` (1–1440), `at`, `kind` (`focus` or `manual`), and an optional `note` (up to 200 characters). Sessions are capped at the most recent 3,000 records.
 
 ### Journal record
 
@@ -458,11 +490,15 @@ Dates are represented as date-only strings in `YYYY-MM-DD` format. Preserve this
 
 ## Project structure
 
-The current project is intentionally a single-file application:
+The application logic is split across a small set of static files (no build step required):
 
 ```text
 project/
-├── index.html            # HTML structure, styles, application state, UI rendering, and behavior
+├── index.html            # HTML shell: metadata, asset links, body skeleton
+├── styles.css            # All application CSS (extracted from the former inline <style>)
+├── app.js                # All application logic (extracted from the former inline <script>)
+├── graphics.css          # Companion/zoo animation and layout styles
+├── graphics.js           # Companion/zoo artwork module (EvridaArt)
 ├── manifest.webmanifest  # Web app manifest: installability (name, display, icons)
 ├── sw.js                 # Service worker: offline app shell (static files only)
 ├── icons/                # App icons generated from the brand mark
@@ -477,7 +513,7 @@ project/
 │   └── make-icons.js     # One-time icon generator; never needed to run the app
 └── tests/        # Zero-dependency Node test suite for the app's pure logic
     ├── helpers/
-    │   └── load-app.js   # Extracts the inline script and exposes internal helpers
+    │   └── load-app.js   # Reads app.js and exposes internal helpers
     ├── dates.test.js     # Date math, boundaries, and percentage rounding
     ├── schedule.test.js  # Scheduled days, eligibility, partial completion
     ├── streaks.test.js   # Current and best streak calculations
@@ -540,14 +576,14 @@ The application's pure logic has an automated test suite that runs in Node.js wi
 - **Location:** `tests/`
 - **Runner:** Node's built-in `node:test` module (Node.js 20 or newer; developed against Node 24). There are no npm packages, no `package.json`, and no build step.
 - **Command:** run `node --test` from the project directory.
-- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; the implementation-intention sentence builder; the icon whitelist (including that the original icons remain present in order, that every listed icon round-trips through normalization, and that unknown icons fall back deterministically); daily-intention carry-forward rules; `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input, the optional when/where fields, legacy cue migration, and backward compatibility with version 6 and 7 backups; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
-- **How it works:** `tests/helpers/load-app.js` reads `index.html`, extracts the inline script, and appends a test-only export hook to the extracted text before evaluating it with minimal DOM stubs. The application file itself is not modified for testability.
+- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; the implementation-intention sentence builder; the icon whitelist (including that the original icons remain present in order, that every listed icon round-trips through normalization, and that unknown icons fall back deterministically); daily-intention carry-forward rules; time-habit detection, minute/hour formatting, minutes totals, and Focus settings/session normalization; `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input, the optional when/where fields, legacy cue migration, and backward compatibility with version 6 and 7 backups; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
+- **How it works:** `tests/helpers/load-app.js` reads `app.js`, appends a test-only export hook, and evaluates it with minimal DOM stubs. The application file itself is not modified for testability.
 - **Scope:** pure logic and static asset checks only. Rendering, dialogs, undo toasts, file import/export flows, themes, cross-tab synchronization, service-worker caching, installation, and offline behavior are not covered and remain manual checks.
 
 ### Static checks
 
 - Parse the HTML and verify tags are properly structured.
-- Extract the inline JavaScript and run a syntax check with Node.js, if available.
+- Run `node --check app.js`, `node --check graphics.js`, and `node --check sw.js` to verify JavaScript syntax.
 - Check for duplicate element IDs.
 - Search for stale product names and outdated privacy claims.
 - Verify that all referenced element IDs exist.
@@ -561,7 +597,7 @@ Example JavaScript syntax check (requires Node.js and a temporary extracted JS f
 node --check app.js
 ```
 
-The application currently embeds JavaScript in `index.html`, so `app.js` must be extracted from the HTML first; it is not a file that currently exists in the project.
+`app.js`, `graphics.js`, and `sw.js` are real files in the project, so they can be checked directly without extracting anything from the HTML.
 
 ### Manual regression checklist
 
@@ -573,13 +609,19 @@ The application currently embeds JavaScript in `index.html`, so `app.js` must be
 - [ ] Invalid targets, names, categories, start dates, and empty schedules are rejected.
 - [ ] Daily progress supports partial counts and target completion.
 - [ ] The habit counter adds one on tap, ignores rapid double-taps, stops at the target, subtracts one on press-and-hold (and on Shift+Enter), and each change shows the Undo toast.
+- [ ] A time habit can be created with Track by → Time and a minutes target; its card shows minutes/hours and opens Focus when clicked.
+- [ ] A focus block completes, adds its minutes to the selected habit, records a session, and plays the chime only when sound is enabled.
+- [ ] Pausing, resetting, and switching modes work; a timer that finishes while the tab is closed is credited exactly once on reload.
+- [ ] Manual time entry adds minutes to the chosen habit for a valid date and rejects future or pre-start dates.
+- [ ] The time library shows total hours, last-7-day hours, per-habit hours, session counts, last-played dates, sparklines, and quiet milestones; count habits do not appear.
+- [ ] Timer settings persist across reloads and are included in a backup round-trip.
 - [ ] With many habits, Completed previews three cards followed by a working Show all/Show fewer toggle, "Not scheduled today" starts collapsed with its count visible, and both toggles are keyboard-operable buttons exposing `aria-expanded`.
 - [ ] With 8 or more habits, Habits-page category headings expand and collapse their cards, keep the done-today summary visible while collapsed, keep keyboard focus on the heading button after toggling, and stay fully expanded below 8 habits.
 - [ ] Future dates and pre-start dates cannot be logged.
 - [ ] Scheduled weekdays are respected by history, streaks, and completion rates.
 - [ ] Every icon in the picker renders as a recognizable glyph rather than a placeholder, the tray scrolls without growing the dialog, and reopening a habit for editing shows its stored icon selected.
 - [ ] History and the Insights mosaic show full, partial, scheduled-with-no-completion, unscheduled, pre-start, and future dates appropriately, and each grid shows its legend.
-- [ ] The Insights Trends / Habitat switcher works, shows the correct view, and marks the active view for assistive technology.
+- [ ] The Insights Trends / History / Habitat switcher works, shows the correct view, and marks the active view for assistive technology.
 - [ ] The Habitat shows each companion with its companion name (or its habit name when none is set), and companions without a name are explained by the hint above the scene.
 - [ ] The header brand mark renders as the rounded-square `E` with its gold dot in both themes, is not announced twice by a screen reader, and does not shift the header layout.
 - [ ] Mosaic squares stay legible, do not overflow their cards, and stack to one column on narrow screens.
@@ -616,7 +658,7 @@ A successful syntax or HTML parse check is not equivalent to a successful intera
 
 ## Accessibility and responsive design
 
-The current implementation includes semantic page regions, labels for form fields, focus-visible styling, accessible names for several icon-only controls, live-region toast feedback, native dialogs, and both top and mobile navigation (the mobile bar carries the five most frequent destinations, the top navigation all six). Heatmap and mosaic day cells carry accessible date labels, state is never communicated by color alone, and controls meet a 44px touch target where they are primary (smaller swatches remain at or above the 24px WCAG 2.5.8 minimum). Motion is limited and respects `prefers-reduced-motion`.
+The current implementation includes semantic page regions, labels for form fields, focus-visible styling, accessible names for several icon-only controls, live-region toast feedback, native dialogs, and both top and mobile navigation (both carry the same five destinations). Heatmap and mosaic day cells carry accessible date labels, state is never communicated by color alone, and controls meet a 44px touch target where they are primary (smaller swatches remain at or above the 24px WCAG 2.5.8 minimum). Motion is limited and respects `prefers-reduced-motion`.
 
 When changing the UI:
 
@@ -685,7 +727,7 @@ When changing the UI:
 | Focus ring (`--focus`) | `#C1D5B8` |
 | Progress track (`--progress-track`) | `#2F3B31` |
 
-The actual source of truth for the current design tokens is the CSS in `index.html`; update these tables if those tokens change.
+The actual source of truth for the current design tokens is `styles.css`; update these tables if those tokens change.
 
 ### Typography
 

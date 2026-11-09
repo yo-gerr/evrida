@@ -1,0 +1,145 @@
+/* Evrida graphics stylesheet: companion animation, zoo layout and scenery.
+ * Pairs with graphics.js. Link it AFTER the main <style> block so the
+ * reduced-motion rules at the bottom win over the global ones. */
+
+/* ============ Companions: idle animation (hooks come from petSvg) ============ */
+.pet { transform-box: view-box; transform-origin: 50% 90%; }
+.pet-fish { animation: petBob 3.6s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.pet-snail { animation: petBreathe 4.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.pet-fish.pet-s0, .pet-snail.pet-s0 { animation-name: petWobble; animation-duration: 3s; }
+.pet-eye { transform-box: fill-box; transform-origin: center; animation: petBlink 5.5s infinite; animation-delay: var(--d, 0s); }
+.pet-tail { transform-box: fill-box; transform-origin: 100% 50%; animation: petTail 1.8s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.pet-sway { transform-box: fill-box; transform-origin: 50% 100%; animation: petSway 4.5s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.pet-spark { transform-box: fill-box; transform-origin: center; animation: petTwinkle 2.6s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.pet-bubble { animation: petRise 4s ease-in infinite; animation-delay: var(--d, 0s); }
+
+@keyframes petBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
+@keyframes petBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015, 1.04); } }
+@keyframes petWobble { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+@keyframes petBlink { 0%, 90%, 100% { transform: scaleY(1); } 94% { transform: scaleY(0.1); } }
+@keyframes petTail { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(6deg); } }
+@keyframes petSway { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+@keyframes petTwinkle { 0%, 100% { opacity: 0.55; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes petRise { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(-4px); opacity: 0; } }
+
+/* ============ Zoo: enclosure layout ============ */
+.zoo-room {
+  margin-bottom: var(--sp-5);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 440px;
+}
+.zoo-room-head { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; margin: 0 0 var(--sp-2); }
+.zoo-room-head h3 { margin: 0; font-family: var(--font-editorial); font-size: 16px; }
+.zoo-jump { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0 0 var(--sp-4); }
+
+.zoo {
+  --sky1: #8fd0f5; --sky2: #d9f0fb; --w1: #7cc8f2; --w2: #2a8fd8; --tint: transparent;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  min-height: 260px;
+  max-height: 440px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--card);
+}
+.zoo.aquarium { background: linear-gradient(180deg, var(--w1), var(--w2)); }
+.zoo.meadow { background: linear-gradient(180deg, var(--sky1), var(--sky2) 70%); }
+
+/* Time of day follows the viewer's clock (set in index.html). */
+.zoo.time-dawn { --sky1: #f6b7a5; --sky2: #fde8c8; --w1: #8fc6e8; --w2: #3b86c4; --tint: rgba(255, 190, 150, 0.1); }
+.zoo.time-dusk { --sky1: #6b6fb8; --sky2: #f6a66b; --w1: #5b88c6; --w2: #28508f; --tint: rgba(255, 140, 60, 0.1); }
+.zoo.time-night { --sky1: #0f1840; --sky2: #2a3a78; --w1: #1d4d86; --w2: #0b2450; --tint: rgba(10, 18, 50, 0.3); }
+
+.zoo-scenery { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+.zoo::before { content: ''; position: absolute; inset: 0; background: var(--tint); z-index: 1; pointer-events: none; }
+/* Glass of the tank / soft vignette of the meadow, above everything. */
+.zoo::after { content: ''; position: absolute; inset: 0; z-index: 60; pointer-events: none; }
+.zoo.aquarium::after {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.3), inset 0 -18px 30px rgba(0, 30, 70, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 7%),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.14) 0 9%, transparent 9% 100%);
+}
+.zoo.meadow::after { box-shadow: inset 0 0 44px rgba(0, 0, 0, 0.09); }
+
+/* Scenery pieces (classes come from the scene SVGs in graphics.js) */
+.zs-moon, .zs-stars { display: none; }
+.zoo.time-night .zs-moon, .zoo.time-night .zs-stars { display: initial; }
+.zoo.time-night .zs-sun { display: none; }
+.zoo.time-dawn .zs-sun, .zoo.time-dusk .zs-sun { transform: translateY(70px); }
+.zoo.time-night .zs-cloud { opacity: 0.35; }
+.zs-rays { animation: zsRays 7s ease-in-out infinite alternate; }
+.zoo.time-night .zs-rays { opacity: 0.25; animation: none; }
+.zs-kelp, .zs-tuft { transform-box: fill-box; transform-origin: 50% 100%; animation: zsSway var(--kd, 5s) ease-in-out infinite alternate; }
+.zs-bub { animation: zsBubble var(--bd, 7s) linear infinite; animation-delay: var(--bs, 0s); }
+.zs-cloud { animation: zsCloud var(--cd, 90s) linear infinite; animation-delay: var(--cs, 0s); }
+.zs-star { animation: zsTwinkle var(--kd, 3s) ease-in-out infinite alternate; }
+@keyframes zsSway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+@keyframes zsRays { from { opacity: 0.55; } to { opacity: 0.95; } }
+@keyframes zsBubble { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-250px); opacity: 0; } }
+@keyframes zsCloud { from { transform: translateX(-160px); } to { transform: translateX(940px); } }
+@keyframes zsTwinkle { from { opacity: 0.35; } to { opacity: 1; } }
+
+/* ============ Zoo: companions in the scene ============ */
+.zoo-actor {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  left: calc((var(--x0) + var(--x1)) / 2);
+  top: var(--y, auto);
+  bottom: var(--by, auto);
+  transform: translateX(-50%);
+  z-index: var(--z, 1);
+  animation: zooPath var(--t, 20s) ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.zoo-actor.kind-plant { left: var(--x0); animation: none; }
+.zoo-actor svg { display: block; width: var(--s); height: var(--s); overflow: visible; }
+.zoo-actor.kind-fish svg { filter: drop-shadow(0 2px 2px rgba(0, 40, 90, 0.22)); }
+.zoo-body { display: block; }
+.zoo-tag {
+  max-width: 112px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 8px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.5;
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+}
+.zoo-tag.done { border-color: var(--good); }
+.zoo-actor:hover .zoo-tag, .zoo-actor:focus-within .zoo-tag { max-width: none; }
+.zoo-actor:hover, .zoo-actor:focus-within { z-index: 90; }
+/* Busy enclosures: shorter tags, full name on hover or focus. */
+.zoo.dense .zoo-tag { max-width: 78px; font-size: 10.5px; padding: 1px 6px; }
+.zoo.dense .zoo-actor:hover .zoo-tag, .zoo.dense .zoo-actor:focus-within .zoo-tag { max-width: none; }
+/* The facing flips at each turnaround; the tag sits outside so text never mirrors. */
+.zoo-flip { display: block; animation: zooFlip calc(var(--t, 20s) * 2) linear infinite; animation-delay: var(--d, 0s); }
+.zoo-bob { display: block; animation: zooBob var(--bt, 4s) ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
+.kind-plant .zoo-flip, .kind-plant .zoo-bob, .kind-snail .zoo-bob { animation: none; }
+/* Enclosures scrolled out of view stop animating. */
+.zoo.paused, .zoo.paused * { animation-play-state: paused !important; }
+@keyframes zooPath { from { left: var(--x0); } to { left: var(--x1); } }
+@keyframes zooFlip { 0%, 49.99% { transform: scaleX(1); } 50%, 100% { transform: scaleX(-1); } }
+@keyframes zooBob { from { transform: translateY(-5px); } to { transform: translateY(5px); } }
+
+@media (max-width: 650px) {
+  .zoo { aspect-ratio: 1.15 / 1; max-height: none; }
+}
+
+/* Must stay last: stopping loops outright is the right reduced-motion
+   behavior (the global rule only shortens durations, which would flicker). */
+@media (prefers-reduced-motion: reduce) {
+  .pet, .pet *, .zoo-actor, .zoo-flip, .zoo-bob, .zs-kelp, .zs-tuft, .zs-bub, .zs-cloud, .zs-star, .zs-rays { animation: none !important; }
+}

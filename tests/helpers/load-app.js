@@ -1,11 +1,10 @@
 'use strict';
-// Test loader for Evrida's inline application script.
+// Test loader for Evrida's application script.
 //
-// The application must remain a single self-contained HTML file, so this
-// loader extracts the <script> contents from index.html at test time and
-// appends a small export hook (string surgery on the extracted text only;
-// index.html itself is never modified) that exposes the app's pure helpers
-// to the test suite.
+// The application logic lives in app.js (extracted from the former inline
+// <script> block). This loader reads app.js at test time and appends a small
+// export hook (string surgery on the extracted text only; app.js itself is
+// never modified) that exposes the app's pure helpers to the test suite.
 //
 // DOM and browser APIs are satisfied with minimal stubs so the script can
 // execute its normal startup path (load -> applyTheme -> render) inside Node.
@@ -13,14 +12,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const HTML_PATH = path.join(__dirname, '..', '..', 'index.html');
+const APP_PATH = path.join(__dirname, '..', '..', 'app.js');
 
 const EXPORTED_NAMES = [
   'esc', 'localKey', 'today', 'dateFrom', 'shift', 'daysBetween',
   'goal', 'count', 'completed', 'scheduled', 'fmt', 'pct',
+  'habitUnit', 'isTimeHabit', 'formatMinutes', 'hoursLabel', 'habitMinutes',
+  'minutesInLastDays', 'clockText',
   'defaultState', 'normalize', 'currentStreak', 'bestStreak', 'eligible',
   'stats', 'completionStats', 'recoveryStats', 'quoteForToday',
-  'carryPending', 'intentionText', 'cueSentence', 'KEY', 'VERSION', 'CATEGORIES', 'COLORS', 'EMOJIS', 'QUOTES',
+  'carryPending', 'intentionText', 'cueSentence', 'renderFocus', 'KEY', 'VERSION', 'CATEGORIES', 'COLORS', 'EMOJIS', 'QUOTES',
 ];
 
 function makeElement() {
@@ -87,17 +88,13 @@ function makeWindow() {
 }
 
 function loadApp() {
-  const html = fs.readFileSync(HTML_PATH, 'utf8');
-  const match = html.match(/<script>([\s\S]*?)<\/script>/);
-  if (!match) throw new Error('Could not find the inline <script> block in index.html.');
-
-  let code = match[1];
+  const code = fs.readFileSync(APP_PATH, 'utf8');
   const terminator = code.lastIndexOf('})();');
-  if (terminator < 0) throw new Error('Could not find the IIFE terminator in the inline script.');
+  if (terminator < 0) throw new Error('Could not find the IIFE terminator in app.js.');
   const hook = `;globalThis.__evridaInternals={${EXPORTED_NAMES.join(',')},getState:()=>state,setState:v=>{state=v}};`;
-  code = code.slice(0, terminator) + hook + code.slice(terminator);
+  const instrumented = code.slice(0, terminator) + hook + code.slice(terminator);
 
-  const fn = new Function('document', 'localStorage', 'window', code);
+  const fn = new Function('document', 'localStorage', 'window', instrumented);
   fn(makeDocument(), makeLocalStorage(), makeWindow());
 
   const internals = globalThis.__evridaInternals;

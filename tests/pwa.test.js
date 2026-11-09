@@ -52,14 +52,18 @@ test('service worker exists and covers the app shell', () => {
   assert.ok(!/fetch\(\s*['"]https?:/.test(sw), 'no cross-origin fetches');
 });
 
-test('index.html links the manifest, icons, and registers the worker', () => {
+test('index.html links the manifest, icons, styles, and app script', () => {
   const html = read('index.html');
   assert.ok(html.includes('rel="manifest" href="manifest.webmanifest"'));
   assert.ok(html.includes('rel="apple-touch-icon" href="icons/icon-180.png"'));
   assert.ok(html.includes('apple-mobile-web-app-capable'));
-  assert.ok(html.includes("navigator.serviceWorker.register('sw.js')"));
-  // Registration must be gated off file:// so direct-open use stays clean.
-  assert.ok(html.includes("location.protocol === 'https:'"));
+  assert.ok(html.includes('rel="stylesheet" href="styles.css"'));
+  assert.ok(html.includes('src="app.js"'));
+});
+test('app.js registers the service worker off file://', () => {
+  const js = read('app.js');
+  assert.ok(js.includes("navigator.serviceWorker.register('sw.js')"));
+  assert.ok(js.includes("location.protocol === 'https:'"));
 });
 
 test('iOS home-screen icon is a valid 180x180 PNG', () => {

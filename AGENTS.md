@@ -11,7 +11,7 @@ This file provides instructions for AI coding agents and maintainers working on 
 - Product: a free, local-first habit tracker and personal-growth app.
 - Product principle: support progress without guilt. Do not introduce shame-based streak messaging, punitive scoring, or copy that treats missed days as personal failure.
 
-The current application is intentionally a self-contained HTML file. HTML, CSS, and JavaScript live together in `index.html`. Do not assume a framework, package manager, bundler, backend, or API exists. The only tooling is a zero-dependency Node test suite in `tests/` (see section 12) plus a one-time icon generator in `tools/` (Node built-ins only; never needed to run or ship the app), neither of which affects how the app is shipped.
+The application is a small set of static files with no build step: `index.html` is the HTML shell, `styles.css` holds all application CSS, `app.js` holds all application logic, and `graphics.css`/`graphics.js` hold companion artwork. Do not assume a framework, package manager, bundler, backend, or API exists. The only tooling is a zero-dependency Node test suite in `tests/` (see section 12) plus a one-time icon generator in `tools/` (Node built-ins only; never needed to run or ship the app), neither of which affects how the app is shipped.
 
 ## 2. Mandatory workflow
 
@@ -35,19 +35,19 @@ Do not overwrite user changes or replace the application wholesale when a focuse
 ## 3. Architecture constraints
 
 - Prefer vanilla HTML, CSS, and JavaScript for normal feature work.
-- Preserve the single-file deployment model unless the user explicitly approves a structural change.
+- The app ships as a small set of static files (`index.html`, `styles.css`, `app.js`, `graphics.css`, `graphics.js`) with no build step. Do not introduce a bundler, framework, or package manager.
 - Do not add frameworks, packages, CDNs, remote fonts, analytics, telemetry, external APIs, or network calls without explaining the need and obtaining approval when appropriate.
 - Do not introduce a server, account requirement, or cloud storage as an incidental part of a feature.
 - Avoid broad refactors of rendering, persistence, or date logic unless the task requires them.
 - Keep the app usable as a static file and from a simple static HTTP host.
-- Approved structural addition: small static PWA assets ship alongside `index.html` — `manifest.webmanifest`, `sw.js`, and `icons/` — so the app can be installed and work offline. The application itself remains the single self-contained `index.html`; never move styles or logic into those files, and keep `index.html` runnable directly as a static file.
+- Approved structural addition: small static PWA assets ship alongside `index.html` — `manifest.webmanifest`, `sw.js`, and `icons/` — so the app can be installed and work offline. The application remains static files with no build step: `index.html`, `styles.css`, `app.js`, `graphics.css`, and `graphics.js`. Do not move styles or logic into the PWA files, and keep `index.html` runnable directly as a static file.
 
 ## 4. Persistence and migration safety
 
 The current persistence constants are:
 
 - localStorage key: `streakgrid`
-- schema version: `8`
+- schema version: `10`
 
 The key name is a deliberate compatibility choice from the app's previous Streakgrid branding. **Do not rename the key to `evrida` just to match the new brand.** That could make existing local data appear lost. If a storage-key migration is explicitly requested, read the old key, validate and migrate its contents, save the new state safely, and preserve a recovery path.
 
@@ -59,9 +59,15 @@ Current root state includes:
 - `journal`
 - `savedQuotes`
 - `tasks`
+- `pets`
+- `dismissedCarries`
+- `sessions`
 - `settings.theme`
+- `settings.focus`
 
-Exports add `app: "Evrida"` and `exportedAt` metadata. Current normalization uses version 8 and validates the principal data fields.
+Exports add `app: "Evrida"` and `exportedAt` metadata. Current normalization uses version 10 and validates the principal data fields.
+
+Time habits add an optional `habit.unit: 'minutes'`; count habits omit it. A time habit's `goal` is minutes (1–600) and its `done` values are minutes (0–999), while count habits keep `goal` 1–99 and rep counts. Both share the same `done` slot, so streak, heatmap, insights, and companion math treat them identically. Sessions are `{id, habitId, date, minutes, at, kind: 'focus'|'manual', note}` and are capped at the most recent 3,000. `settings.focus` is `{focus, short, long, every, sound}` with ranges 1–180, 1–60, 1–90, 2–8, and boolean. The resumable timer also uses a separate `streakgrid-timer` key that is not part of the backup schema.
 
 Rules:
 
@@ -89,7 +95,7 @@ Habit logic depends on calendar dates, scheduled weekdays, start dates, goals, a
 - Unscheduled days and pre-start dates must not be treated as failed scheduled days.
 - Streak calculations must respect the habit's schedule; do not simply count adjacent calendar dates when rest days are involved.
 - Be careful with JavaScript date parsing and timezone conversions. Date-only values should not shift to a neighboring day.
-- Keep goal validation consistent with the UI: integer from 1 through 99.
+- Keep goal validation consistent with the UI: count habits use an integer from 1 through 99; time habits (`unit: 'minutes'`) use 1 through 600.
 - Completion counts are bounded by existing validation/normalization. Preserve sensible bounds when changing count logic.
 
 Any changes to streak, completion-rate, history, gallery, or date behavior should include tests or explicit manual verification for:
@@ -208,12 +214,12 @@ The current app contains these areas:
 
 - **Today:** current-day habit progress, daily quote, daily intentions.
 - **Habits:** create, edit, delete, schedule, target, category, emoji, color. Habits are grouped into alphabetical category sections; with `CATEGORY_COLLAPSE_THRESHOLD` (8) or more habits each section heading becomes a collapsible disclosure that shows a done-today summary while collapsed.
-- **History:** historical completion and date inspection.
-- **Insights:** a Trends / Mosaic view switcher; trends are time-period/category summaries and habit comparisons, and the mosaic is the 91-day/13-week progress view (formerly its own Gallery page).
-- **Journal:** dated reflections, mood, search, saved quote access, habit snapshot.
-- **Settings:** system/light/dark theme, export/import, local-data deletion, privacy notes.
+- **Insights:** Trends, History, and Habitat tabs. Trends are time-period/category summaries and habit comparisons; History is historical completion and date inspection; Habitat is the companion view.
+- **Focus:** Pomodoro timer for time habits (Track by → Time), session logging, manual time entry, and a Steam-style time library. Only time habits appear in the timer picker and time library. A completed focus block credits the configured focus minutes to the selected habit's `done[today]`, records a session, and awards companion XP if it reaches the goal; breaking a block early logs nothing. The timer resumes from `streakgrid-timer` after a reload and credits a block that finished while away exactly once. Break early-stop and manual-entry rules are documented in the README.
+- **Journal:** dated reflections, mood, search, saved quote access, habit snapshot. Accessed from Settings.
+- **Settings:** system/light/dark theme, export/import, local-data deletion, privacy notes, and Journal access.
 
-The navigation groups six destinations into a daily loop (Today, Habits, Journal), review (History, Insights), and configuration (Settings). The desktop top navigation lists all six; the mobile bottom bar lists the five highest-frequency ones (Today, Habits, Insights, Journal, Settings). History drops off the mobile bar to keep label widths readable and remains reachable from every habit card's History button, which renders the full all-habits timeline. Keep both lists in sync when adding or renaming a destination, and treat the mobile count as a maximum rather than a target — seven equal-weight tabs is what made labels clip.
+The navigation groups five destinations: Today and Habits (daily loop), Insights (Trends, History, Habitat) and Focus (review & focus), and Settings (configuration, including Journal access). The desktop top navigation lists all five; the mobile bottom bar lists the same five. History is a tab within Insights and remains reachable from every habit card's History button. Keep both lists in sync when adding or renaming a destination, and treat the mobile count as a maximum rather than a target.
 
 When changing one area, check connected calculations and UI. For example, changing habit schedules may affect Today, History, Insights, streaks, and the mosaic.
 
@@ -225,7 +231,7 @@ Daily intentions are separate from habits. Journal entries are optional and must
 
 - Exported filename currently follows `evrida-backup-YYYY-MM-DD.json`.
 - Export includes `app: "Evrida"` and an ISO timestamp in `exportedAt`.
-- The app's current root schema version is 8.
+- The app's current root schema version is 10.
 - Import must validate the selected JSON, normalize it, request confirmation, and create a safety export before replacing current state.
 - Invalid JSON and invalid data must produce a useful message without corrupting current state.
 - Keep file-size limits and array/field limits intentional and documented.
@@ -234,20 +240,20 @@ Daily intentions are separate from habits. Journal entries are optional and must
 
 ## 12. Testing expectations
 
-The project has a zero-dependency automated test suite in `tests/`, using Node's built-in `node:test` runner (Node.js 20+). Run it with `node --test` from the project root. It covers the app's pure logic: date math and boundaries, scheduled-day and start-date eligibility, partial completion, streaks, insight and recovery statistics, HTML escaping, and `normalize()` as the untrusted-input boundary for `localStorage` and imported backups.
+The project has a zero-dependency automated test suite in `tests/`, using Node's built-in `node:test` runner (Node.js 20+). Run it with `node --test` from the project root. It covers the app's pure logic: date math and boundaries, scheduled-day and start-date eligibility, partial completion, streaks, insight and recovery statistics, HTML escaping, time-habit detection and minute/hour formatting, Focus settings and session normalization, and `normalize()` as the untrusted-input boundary for `localStorage` and imported backups.
 
 Rules for the test suite:
 
 - Do not add npm packages, a `package.json`, or a build step for testing. Node's built-in modules only.
-- Do not modify `index.html` to enable testing; the loader in `tests/helpers/load-app.js` extracts the inline script at runtime.
-- When changing streak, completion-rate, history, gallery, or date behavior, extend the relevant test file.
+- Do not modify `app.js` to enable testing; the loader in `tests/helpers/load-app.js` reads it and appends a test-only export hook at runtime. `app.js` itself must stay runnable by the browser as-is.
+- When changing streak, completion-rate, history, gallery, time-habit, Focus, or date behavior, extend the relevant test file (`tests/focus.test.js` for time habits and the timer).
 - The suite covers pure logic only; it does not prove interactive browser behavior.
 
 Run applicable checks that are available:
 
 - Automated test suite: `node --test`.
 - HTML parsing/structure check.
-- Inline JavaScript syntax check (extract script contents to a temporary file if needed).
+- JavaScript syntax check: `node --check app.js`, `node --check graphics.js`, `node --check sw.js`.
 - Duplicate-ID scan.
 - Search for stale branding and broken references.
 - Manual browser testing for changed behavior.
@@ -263,6 +269,10 @@ For feature work, at minimum consider these regression flows:
 - Confirm destructive actions.
 - Verify journal search/save/clear if related.
 - Verify daily intentions and limits if related.
+- Verify a time habit's card shows minutes/hours and opens Focus, and that count habits still use the tap/hold counter.
+- Verify a completed focus block credits the selected habit and records a session; pausing, resetting, mode switching, the chime toggle, and reload/background credit work.
+- Verify manual time entry accepts a valid date and rejects future and pre-start dates.
+- Verify the time library sorts correctly and excludes count habits.
 - Verify light, dark, and system theme.
 - Check keyboard operation, focus, and narrow viewport layout.
 

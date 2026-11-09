@@ -9,11 +9,15 @@
  * promptly, with the cache as the offline fallback. Static assets are
  * cache-first, refreshed in the background.
  */
-const CACHE = 'evrida-shell-v1';
+const CACHE = 'evrida-shell-v2';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './styles.css',
+  './app.js',
+  './graphics.css',
+  './graphics.js',
   './icons/icon.svg',
   './icons/icon-180.png',
   './icons/icon-192.png',
