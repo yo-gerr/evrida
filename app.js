@@ -188,6 +188,8 @@
           // Session-only view state; never persisted.
           insightView = 'trends',
           habitatMode = 'zoo',
+          // Settings hosts the Journal. Session-only sub-view; never persisted.
+          settingsView = 'main',
           editingId = null,
           insightPeriod = 30,
           insightCategory = 'All categories',
@@ -872,6 +874,7 @@
                 // so the page never opens on a stale view.
                 insightView = b.dataset.insightsView || 'trends';
                 activePage = b.dataset.page;
+                settingsView = activePage === 'journal' ? 'journal' : 'main';
                 render();
               })
           );
@@ -1416,7 +1419,8 @@
           let html = pageHead(
             'A little space for you',
             'Journal',
-            'A private pause for your thoughts. Optional, short, and never required to complete a habit.'
+            'A private pause for your thoughts. Optional, short, and never required to complete a habit.',
+            '<button type="button" class="btn" data-action="close-journal-view">← Settings</button>'
           );
           html += `<div class="panel journal-editor"><div class="two"><div class="field"><label for="journalDate">Entry date</label><input type="date" id="journalDate" value="${journalDate}" max="${today()}"></div><div class="field"><label>How are you feeling?</label><div class="mood-pick">${[
             ['great', '😁 Great'],
@@ -2085,7 +2089,7 @@
               'Settings',
               'Keep Evrida comfortable, private, and backed up.'
             ) +
-            `<div class="panel"><h3>Appearance</h3><div class="setting-row"><div class="setting-copy"><h4>Theme</h4><p>Choose the appearance that feels right for you.</p></div><div style="width:135px"><select id="themeSelect"><option value="system" ${state.settings.theme === 'system' ? 'selected' : ''}>System</option><option value="light" ${state.settings.theme === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${state.settings.theme === 'dark' ? 'selected' : ''}>Dark</option></select></div></div></div><div class="panel"><h3>Backup and restore</h3><p class="muted small-text">Export a backup regularly. It includes your habits, schedules, completion history, journal entries, saved quotes, daily intentions, and preferences. The file is saved wherever your browser downloads files.</p><div class="setting-row"><div class="setting-copy"><h4>Export backup</h4><p>Download a JSON copy of your data.</p></div><button class="btn primary" data-action="export">Export</button></div><div class="setting-row"><div class="setting-copy"><h4>Import backup</h4><p>Validates a backup before replacing your data. A safety copy downloads first.</p></div><button class="btn" data-action="import">Import</button></div></div><div class="panel"><h3>Privacy and storage</h3><div class="privacy-note">🔒 <strong>Your data stays in this browser.</strong> Evrida does not create an account or send your habits to a server. Anyone with access to this browser profile may be able to see the data. Browser storage can be cleared by device cleanup or browser settings, so keep a backup if your history matters.</div><div class="setting-row danger-zone"><div class="setting-copy"><h4>Delete all local data</h4><p>Permanently remove habits, completion history, journal entries, and saved quotes from this browser.</p></div><button class="btn danger" data-action="clear">Delete all</button></div></div><p class="small-text">Evrida ${VERSION}. Stored locally using browser localStorage. No analytics or third-party font requests.</p>`
+            `<div class="panel"><h3>Appearance</h3><div class="setting-row"><div class="setting-copy"><h4>Theme</h4><p>Choose the appearance that feels right for you.</p></div><div style="width:135px"><select id="themeSelect"><option value="system" ${state.settings.theme === 'system' ? 'selected' : ''}>System</option><option value="light" ${state.settings.theme === 'light' ? 'selected' : ''}>Light</option><option value="dark" ${state.settings.theme === 'dark' ? 'selected' : ''}>Dark</option></select></div></div></div><div class="panel"><h3>Journal &amp; reflections</h3><p class="muted small-text">A private, optional space for dated notes, what went well, challenges, gratitude, and mood. Entries stay in this browser and travel with your backups.</p><div class="setting-row"><div class="setting-copy"><h4>Open your journal</h4><p>Write, search, and revisit past entries.</p></div><button class="btn" data-action="open-journal-view">Open journal</button></div></div><div class="panel"><h3>Backup and restore</h3><p class="muted small-text">Export a backup regularly. It includes your habits, schedules, completion history, journal entries, saved quotes, daily intentions, and preferences. The file is saved wherever your browser downloads files.</p><div class="setting-row"><div class="setting-copy"><h4>Export backup</h4><p>Download a JSON copy of your data.</p></div><button class="btn primary" data-action="export">Export</button></div><div class="setting-row"><div class="setting-copy"><h4>Import backup</h4><p>Validates a backup before replacing your data. A safety copy downloads first.</p></div><button class="btn" data-action="import">Import</button></div></div><div class="panel"><h3>Privacy and storage</h3><div class="privacy-note">🔒 <strong>Your data stays in this browser.</strong> Evrida does not create an account or send your habits to a server. Anyone with access to this browser profile may be able to see the data. Browser storage can be cleared by device cleanup or browser settings, so keep a backup if your history matters.</div><div class="setting-row danger-zone"><div class="setting-copy"><h4>Delete all local data</h4><p>Permanently remove habits, completion history, journal entries, and saved quotes from this browser.</p></div><button class="btn danger" data-action="clear">Delete all</button></div></div><p class="small-text">Evrida ${VERSION}. Stored locally using browser localStorage. No analytics or third-party font requests.</p>`
           );
         }
         function wireJournal() {
@@ -2141,7 +2145,10 @@
           const root = $('#main');
           // Journal is now accessed via Settings; History is now an Insights tab.
           // Redirect legacy deep links to their new homes.
-          if (activePage === 'journal') activePage = 'settings';
+          if (activePage === 'journal') {
+            activePage = 'settings';
+            settingsView = 'journal';
+          }
           if (activePage === 'history') {
             activePage = 'insights';
             insightView = 'history';
@@ -2155,7 +2162,9 @@
                   ? renderInsights()
                   : activePage === 'focus'
                     ? renderFocus()
-                    : renderSettings();
+                    : settingsView === 'journal'
+                      ? renderJournal()
+                      : renderSettings();
           root
             .querySelectorAll('[data-action]')
             .forEach(b => b.addEventListener('click', handleAction));
@@ -2172,6 +2181,7 @@
             b.addEventListener('click', () => {
               insightView = b.dataset.insightsView || 'trends';
               activePage = b.dataset.page;
+              settingsView = activePage === 'journal' ? 'journal' : 'main';
               render();
             })
           );
@@ -2187,7 +2197,7 @@
               render();
             })
           );
-          if (activePage === 'settings')
+          if (activePage === 'settings' && settingsView !== 'journal')
             $('#themeSelect').onchange = e => {
               state.settings.theme = e.target.value;
               save();
@@ -2853,6 +2863,17 @@
           }
           if (action === 'toggle-focus-settings') {
             focusCfgOpen = !focusCfgOpen;
+            render();
+            return;
+          }
+          if (action === 'open-journal-view') {
+            activePage = 'settings';
+            settingsView = 'journal';
+            render();
+            return;
+          }
+          if (action === 'close-journal-view') {
+            settingsView = 'main';
             render();
             return;
           }

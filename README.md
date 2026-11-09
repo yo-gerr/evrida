@@ -157,7 +157,7 @@ The **time library** presents time habits like a game library: total hours inves
 
 ### 6. Journal (within Settings)
 
-Journal entries are optional and stored locally. Journal is accessed from the Settings page. A dated entry can contain:
+Journal entries are optional and stored locally. Journal is accessed from the Settings page: choose **Open journal** under “Journal &amp; reflections”, and use **← Settings** to return. A dated entry can contain:
 
 - A free-form note (up to 5,000 characters).
 - What went well (up to 1,500 characters).

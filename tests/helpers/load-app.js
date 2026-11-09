@@ -21,7 +21,7 @@ const EXPORTED_NAMES = [
   'minutesInLastDays', 'clockText',
   'defaultState', 'normalize', 'currentStreak', 'bestStreak', 'eligible',
   'stats', 'completionStats', 'recoveryStats', 'quoteForToday',
-  'carryPending', 'intentionText', 'cueSentence', 'renderFocus', 'KEY', 'VERSION', 'CATEGORIES', 'COLORS', 'EMOJIS', 'QUOTES',
+  'carryPending', 'intentionText', 'cueSentence', 'renderFocus', 'renderJournal', 'renderSettings', 'render', '$', 'KEY', 'VERSION', 'CATEGORIES', 'COLORS', 'EMOJIS', 'QUOTES',
 ];
 
 function makeElement() {
@@ -91,7 +91,7 @@ function loadApp() {
   const code = fs.readFileSync(APP_PATH, 'utf8');
   const terminator = code.lastIndexOf('})();');
   if (terminator < 0) throw new Error('Could not find the IIFE terminator in app.js.');
-  const hook = `;globalThis.__evridaInternals={${EXPORTED_NAMES.join(',')},getState:()=>state,setState:v=>{state=v}};`;
+  const hook = `;globalThis.__evridaInternals={${EXPORTED_NAMES.join(',')},getState:()=>state,setState:v=>{state=v},getActivePage:()=>activePage,setActivePage:v=>{activePage=v},getSettingsView:()=>settingsView,setSettingsView:v=>{settingsView=v}};`;
   const instrumented = code.slice(0, terminator) + hook + code.slice(terminator);
 
   const fn = new Function('document', 'localStorage', 'window', instrumented);

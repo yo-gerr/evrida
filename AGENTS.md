@@ -223,7 +223,7 @@ The navigation groups five destinations: Today and Habits (daily loop), Insights
 
 When changing one area, check connected calculations and UI. For example, changing habit schedules may affect Today, History, Insights, streaks, and the mosaic.
 
-The Insights view switcher is session-only presentation state. Do not persist it and do not add it to backups; leaving and returning to Insights resets it to Trends. The same rule covers the Today section disclosures (`todaySections`) and the Habits category disclosures (`habitSections`).
+The Insights view switcher is session-only presentation state. Do not persist it and do not add it to backups; leaving and returning to Insights resets it to Trends. The same rule covers the Today section disclosures (`todaySections`), the Habits category disclosures (`habitSections`), and the Settings journal sub-view (`settingsView`). The top-level Settings destination always opens the main settings list, not a remembered Journal view.
 
 Daily intentions are separate from habits. Journal entries are optional and must not affect habit completion.
 
