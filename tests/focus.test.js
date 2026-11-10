@@ -15,9 +15,16 @@ const {
   habitMinutes,
   minutesInLastDays,
   clockText,
+  FOCUS_PRESETS,
+  completeFocusSession,
+  resetFocusTimer,
   normalize,
   renderFocus,
   setState,
+  getState,
+  getFocusTimer,
+  setFocusTimer,
+  today,
 } = loadApp();
 
 // --- Unit detection --------------------------------------------------------
@@ -33,6 +40,19 @@ test('isTimeHabit is true only for minute habits', () => {
   assert.equal(isTimeHabit({}), false);
   assert.equal(isTimeHabit({ unit: 'minutes' }), true);
   assert.equal(isTimeHabit({ unit: 'count' }), false);
+});
+
+// --- Presets -----------------------------------------------------------------
+
+test('Focus presets stay inside the documented ranges', () => {
+  assert.ok(FOCUS_PRESETS.length >= 3);
+  for (const p of FOCUS_PRESETS) {
+    assert.ok(p.id && p.name);
+    assert.ok(p.focus >= 1 && p.focus <= 180);
+    assert.ok(p.short >= 1 && p.short <= 60);
+    assert.ok(p.long >= 1 && p.long <= 90);
+    assert.ok(p.every >= 2 && p.every <= 8);
+  }
 });
 
 // --- Display formatting ----------------------------------------------------
@@ -151,33 +171,55 @@ test('normalize clamps Focus settings into documented ranges', () => {
     habits: [],
     settings: { theme: 'dark', focus: { focus: 999, short: 0, long: 200, every: 99, sound: false } },
   }).settings.focus;
-  assert.deepEqual(focus, { focus: 180, short: 1, long: 90, every: 8, sound: false });
+  assert.deepEqual(focus, { focus: 180, short: 1, long: 90, every: 8, sound: false, notify: false, autoBreak: true, autoFocus: false });
+});
+
+test('normalize preserves Focus notification and auto-start flags', () => {
+  const focus = normalize({
+    habits: [],
+    settings: { focus: { notify: true, autoBreak: false, autoFocus: true } },
+  }).settings.focus;
+  assert.equal(focus.notify, true);
+  assert.equal(focus.autoBreak, false);
+  assert.equal(focus.autoFocus, true);
+});
+
+test('normalize treats non-boolean Focus flags as defaults', () => {
+  const focus = normalize({
+    habits: [],
+    settings: { focus: { notify: 'yes', autoBreak: 'no', autoFocus: 1 } },
+  }).settings.focus;
+  assert.equal(focus.notify, false);
+  assert.equal(focus.autoBreak, true);
+  assert.equal(focus.autoFocus, false);
 });
 
 test('normalize defaults Focus settings when missing', () => {
   const focus = normalize({ habits: [] }).settings.focus;
-  assert.deepEqual(focus, { focus: 25, short: 5, long: 15, every: 4, sound: true });
+  assert.deepEqual(focus, { focus: 25, short: 5, long: 15, every: 4, sound: true, notify: false, autoBreak: true, autoFocus: false });
 });
 
 // --- Focus page smoke ------------------------------------------------------
 
 test('renderFocus builds the timer and an empty time library', () => {
   setState({
-    version: 10,
+    version: 11,
     habits: [],
     sessions: [],
-    settings: { theme: 'system', focus: { focus: 25, short: 5, long: 15, every: 4, sound: true } },
+    settings: { theme: 'system', focus: { focus: 25, short: 5, long: 15, every: 4, sound: true, notify: false, autoBreak: true, autoFocus: false } },
   });
   const html = renderFocus();
   assert.match(html, /id="focusClock"/);
   assert.match(html, /Your time library/);
   assert.match(html, /No time habits yet/);
+  assert.match(html, /25 min focus/);
+  assert.match(html, /Classic/);
 });
 
 test('renderFocus lists time habits with hours and excludes count habits', (t) => {
   setToday(t, 2026, 1, 15);
   setState({
-    version: 10,
+    version: 11,
     habits: [
       makeHabit({
         id: 'study',
@@ -191,11 +233,108 @@ test('renderFocus lists time habits with hours and excludes count habits', (t) =
     sessions: [
       { id: 's1', habitId: 'study', date: '2026-01-15', minutes: 30, at: 1, kind: 'focus', note: '' },
     ],
-    settings: { theme: 'system', focus: { focus: 25, short: 5, long: 15, every: 4, sound: true } },
+    settings: { theme: 'system', focus: { focus: 25, short: 5, long: 15, every: 4, sound: true, notify: false, autoBreak: true, autoFocus: false } },
   });
   const html = renderFocus();
   assert.match(html, /<h4>Study<\/h4>/);
   assert.match(html, /1\.5 hrs/);
   assert.doesNotMatch(html, /<h4>Push-ups<\/h4>/);
   assert.match(html, /Recent sessions/);
+});
+
+// --- Auto-start behaviour --------------------------------------------------
+
+function focusState(focus = {}) {
+  return normalize({
+    habits: [
+      makeHabit({ id: 'study', name: 'Study', unit: 'minutes', goal: 60 }),
+    ],
+    settings: { focus: { focus: 25, short: 5, long: 15, every: 4, ...focus } },
+  });
+}
+
+// completeFocusSession starts a new interval for auto-start. Mock the toast
+// timeout so the suite does not wait 4.5 seconds for it to drain, then always
+// reset the timer to clear the interval.
+function completeInTest(t, state) {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  setState(state);
+  try {
+    completeFocusSession();
+    return { timer: { ...getFocusTimer() }, state: getState() };
+  } finally {
+    resetFocusTimer();
+  }
+}
+
+test('a completed focus block auto-starts a short break and credits minutes', (t) => {
+  setFocusTimer({
+    mode: 'focus',
+    habitId: 'study',
+    running: true,
+    endsAt: Date.now() + 1000,
+    remaining: 0,
+    cycle: 0,
+    active: true,
+  });
+  const { timer, state } = completeInTest(t, focusState());
+  assert.equal(timer.mode, 'short');
+  assert.equal(timer.running, true);
+  assert.equal(timer.active, true);
+  assert.equal(timer.remaining, 5 * 60);
+  assert.equal(state.sessions.length, 1);
+  assert.equal(state.sessions[0].minutes, 25);
+  assert.equal(state.sessions[0].habitId, 'study');
+  assert.equal(state.habits[0].done[today()], 25);
+});
+
+test('turning autoBreak off leaves a finished focus block waiting for Start', (t) => {
+  setFocusTimer({
+    mode: 'focus',
+    habitId: 'study',
+    running: true,
+    endsAt: Date.now() + 1000,
+    remaining: 0,
+    cycle: 0,
+    active: true,
+  });
+  const { timer } = completeInTest(t, focusState({ autoBreak: false }));
+  assert.equal(timer.mode, 'short');
+  assert.equal(timer.running, false);
+  assert.equal(timer.active, true);
+  assert.equal(timer.remaining, 5 * 60);
+});
+
+test('a finished break waits for the next focus by default', (t) => {
+  setFocusTimer({
+    mode: 'short',
+    habitId: 'study',
+    running: true,
+    endsAt: Date.now() + 1000,
+    remaining: 0,
+    cycle: 1,
+    active: true,
+  });
+  const { timer } = completeInTest(t, focusState());
+  assert.equal(timer.mode, 'focus');
+  assert.equal(timer.running, false);
+  assert.equal(timer.active, true);
+  assert.equal(timer.remaining, 25 * 60);
+});
+
+test('autoFocus starts the next focus when the break ends', (t) => {
+  setFocusTimer({
+    mode: 'short',
+    habitId: 'study',
+    running: true,
+    endsAt: Date.now() + 1000,
+    remaining: 0,
+    cycle: 1,
+    active: true,
+  });
+  const { timer } = completeInTest(t, focusState({ autoFocus: true }));
+  assert.equal(timer.mode, 'focus');
+  assert.equal(timer.running, true);
+  assert.equal(timer.active, true);
+  assert.equal(timer.remaining, 25 * 60);
 });

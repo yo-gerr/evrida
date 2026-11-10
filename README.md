@@ -146,7 +146,12 @@ Focus is the home for time-based habits. A habit created with **Track by → Tim
 The Pomodoro timer includes:
 
 - Focus, short-break, and long-break modes. Defaults are 25 / 5 / 15 minutes, with a long break after every 4 focus blocks; all four values are editable in Timer settings.
+- Three one-tap presets — Classic (25/5/15, every 4), Deep work (50/10/20, every 3), and Quick (15/3/10, every 4) — plus Custom values. Presets are disabled while a timer is running.
+- A summary line showing the current focus, short-break, long-break, and long-break interval values.
+- Two auto-start choices: **Start breaks automatically** (on by default) and **Start the next focus automatically** (off by default so time is never credited while you are away from the device).
 - A circular countdown ring, Start / Pause / Reset, and a habit picker. Only time habits are listed; choosing "No habit — just track time" logs the minutes without crediting a habit.
+- A persistent **mini timer** outside the page content: while a session is running or paused, every page shows its mode, remaining time, and habit, with a Pause/Resume button and a link back to Focus.
+- An optional **desktop notification** when a block ends while Evrida is in the background or another tab, with a test button in Timer settings. Notifications are generated on-device only; nothing is sent anywhere. They require browser permission and, when served over the web, HTTPS or localhost. On iPhone they require adding Evrida to the Home Screen. If permission is denied or unsupported, the chime and in-app message still work.
 - A soft chime when a block ends (WebAudio, generated locally; can be turned off). No external audio file or network request is used.
 - Session persistence through the `streakgrid-timer` localStorage key. If the page is reloaded or backgrounded mid-session, the timer recomputes from the wall clock and credits a completed block once.
 - Manual time entry (habit, date, minutes, optional note) for sessions you forgot to time.
@@ -250,7 +255,7 @@ The current implementation includes these concepts:
 
 - `KEY`: localStorage key. It is currently `streakgrid` for backward compatibility with earlier versions.
 - `TIMER_KEY`: separate localStorage key for resumable Focus timer state (`streakgrid-timer`). It holds only timer mode, habit id, and timing, never habit or journal content.
-- `VERSION`: current persisted schema version, currently `10`.
+- `VERSION`: current persisted schema version, currently `11`.
 - `FOCUS_DEFAULTS`, `MILESTONES`: default Pomodoro durations and the quiet hour milestones shown in the time library.
 - `CATEGORIES`, `COLORS`, `EMOJIS`, `DAYS`, `NAV`, and `QUOTES`: application configuration and built-in content.
 
@@ -326,7 +331,7 @@ For **time** habits, the card shows minutes or hours (for example `45m/1h`) and 
 
 ### Focus and Pomodoro
 
-Open **Focus** from the navigation. Choose a time habit (or track unassigned time), pick Focus, short break, or long break, and press Start. When a focus block completes, its configured minutes are added to the selected habit for today and a chime plays if sound is enabled. The timer keeps running across page changes; if you reload or background the tab, it recomputes from the clock and credits a finished block once. Breaking a block early does not log time — use manual entry for partial sessions. Timer lengths, the long-break interval, and sound are editable under **Timer settings**, and nothing is sent off the device.
+Open **Focus** from the navigation. Choose a time habit (or track unassigned time), pick Focus, short break, or long break, and press Start. When a focus block completes, its configured minutes are added to the selected habit for today and a chime plays if sound is enabled; breaks can start automatically if that option is on. The timer keeps running across page changes, and a mini timer stays visible on every other page. If you reload or background the tab, it recomputes from the clock and credits a finished block once. Breaking a block early does not log time — use manual entry for partial sessions. Timer lengths, the long-break interval, presets, auto-start behavior, sound, and optional desktop notifications are editable under **Timer settings**, and nothing is sent off the device.
 
 ### Daily intentions
 
@@ -437,7 +442,7 @@ The following describes the current logical state. It is documentation for the c
 
 | Property | Purpose |
 |---|---|
-| `version` | Persisted schema version (`10` in the current build) |
+| `version` | Persisted schema version (`11` in the current build) |
 | `habits` | Array of habit records |
 | `gallery` | Array of optional gallery-related records retained by normalization |
 | `journal` | Object keyed by date (`YYYY-MM-DD`) |
@@ -447,7 +452,7 @@ The following describes the current logical state. It is documentation for the c
 | `pets` | Object keyed by habit id; each value holds companion progress (`xp`, `stage`, `species`) |
 | `dismissedCarries` | Object of `date::intention-text` keys remembering intentions the user deleted, so "Bring forward" does not resurface them. Pruned to the last week during normalization |
 | `settings.theme` | `system`, `light`, or `dark` |
-| `settings.focus` | Pomodoro configuration: `focus` (1–180 minutes), `short` (1–60), `long` (1–90), `every` (2–8 focus blocks between long breaks), and `sound` (boolean). Defaults are 25 / 5 / 15 / 4 / true |
+| `settings.focus` | Pomodoro configuration: `focus` (1-180 minutes), `short` (1-60), `long` (1-90), `every` (2-8 focus blocks between long breaks), `sound`, `notify`, `autoBreak`, and `autoFocus` (booleans). Defaults are 25 / 5 / 15 / 4 / true / false / true / false |
 
 Exports additionally include `app` and `exportedAt` metadata.
 
@@ -576,7 +581,7 @@ The application's pure logic has an automated test suite that runs in Node.js wi
 - **Location:** `tests/`
 - **Runner:** Node's built-in `node:test` module (Node.js 20 or newer; developed against Node 24). There are no npm packages, no `package.json`, and no build step.
 - **Command:** run `node --test` from the project directory.
-- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; the implementation-intention sentence builder; the icon whitelist (including that the original icons remain present in order, that every listed icon round-trips through normalization, and that unknown icons fall back deterministically); daily-intention carry-forward rules; time-habit detection, minute/hour formatting, minutes totals, and Focus settings/session normalization; `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input, the optional when/where fields, legacy cue migration, and backward compatibility with version 6 and 7 backups; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
+- **Coverage:** date parsing, formatting, and shifting (including month, year, and leap-day boundaries); scheduled-day and start-date eligibility; partial versus completed progress; current and best streaks (including rest-day handling and grace for an incomplete today); insight and recovery statistics; HTML escaping of user-controlled strings; the implementation-intention sentence builder; the icon whitelist (including that the original icons remain present in order, that every listed icon round-trips through normalization, and that unknown icons fall back deterministically); daily-intention carry-forward rules; time-habit detection, minute/hour formatting, minutes totals, Focus preset ranges, and Focus settings/session normalization (including notification and auto-start flags); `normalize()` as the validation boundary for `localStorage` data and imported backups, including rejection of malformed input, the optional when/where fields, legacy cue migration, and backward compatibility with version 6 and 7 backups; and PWA asset sync (manifest validity, referenced icon files, service-worker wiring in `index.html`).
 - **How it works:** `tests/helpers/load-app.js` reads `app.js`, appends a test-only export hook, and evaluates it with minimal DOM stubs. The application file itself is not modified for testability.
 - **Scope:** pure logic and static asset checks only. Rendering, dialogs, undo toasts, file import/export flows, themes, cross-tab synchronization, service-worker caching, installation, and offline behavior are not covered and remain manual checks.
 
@@ -615,6 +620,10 @@ node --check app.js
 - [ ] Manual time entry adds minutes to the chosen habit for a valid date and rejects future or pre-start dates.
 - [ ] The time library shows total hours, last-7-day hours, per-habit hours, session counts, last-played dates, sparklines, and quiet milestones; count habits do not appear.
 - [ ] Timer settings persist across reloads and are included in a backup round-trip.
+- [ ] Presets apply the expected focus/break values and are refused while a timer is running.
+- [ ] With “Start breaks automatically” on, a completed focus block starts the break; with “Start the next focus automatically” off, a finished break waits for Start.
+- [ ] The mini timer follows the session onto other pages, shows Pause/Resume correctly, and opens Focus when clicked.
+- [ ] Desktop notifications are requested only after a user action; a test notification arrives when permission is granted, and denial falls back to the chime and in-app message without an error.
 - [ ] With many habits, Completed previews three cards followed by a working Show all/Show fewer toggle, "Not scheduled today" starts collapsed with its count visible, and both toggles are keyboard-operable buttons exposing `aria-expanded`.
 - [ ] With 8 or more habits, Habits-page category headings expand and collapse their cards, keep the done-today summary visible while collapsed, keep keyboard focus on the heading button after toggling, and stay fully expanded below 8 habits.
 - [ ] Future dates and pre-start dates cannot be logged.

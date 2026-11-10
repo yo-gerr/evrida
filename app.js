@@ -2,8 +2,24 @@
         'use strict';
         // Keep the legacy storage key so existing Streakgrid data remains available after rebranding.
         const KEY = 'streakgrid';
-        const VERSION = 10;
-        const FOCUS_DEFAULTS = { focus: 25, short: 5, long: 15, every: 4, sound: true };
+        const VERSION = 11;
+        const FOCUS_DEFAULTS = {
+          focus: 25,
+          short: 5,
+          long: 15,
+          every: 4,
+          sound: true,
+          notify: false,
+          autoBreak: true,
+          autoFocus: false
+        };
+        // One-tap starting points; the form below still allows any values in
+        // range. Keep every preset inside the documented validation bounds.
+        const FOCUS_PRESETS = [
+          { id: 'classic', name: 'Classic', focus: 25, short: 5, long: 15, every: 4 },
+          { id: 'deep', name: 'Deep work', focus: 50, short: 10, long: 20, every: 3 },
+          { id: 'quick', name: 'Quick', focus: 15, short: 3, long: 10, every: 4 }
+        ];
         const TIMER_KEY = `${KEY}-timer`;
         const MILESTONES = [10, 50, 100, 250, 500, 1000];
         const CATEGORIES = [
@@ -214,7 +230,9 @@
             running: false,
             endsAt: 0,
             remaining: FOCUS_DEFAULTS.focus * 60,
-            cycle: 0
+            cycle: 0,
+            // Whether the mini timer should stay visible across pages.
+            active: false
           },
           focusTicker = null;
         const baseTitle = document.title;
@@ -512,7 +530,10 @@
             short: clampInt(fcfg.short, 1, 60, FOCUS_DEFAULTS.short),
             long: clampInt(fcfg.long, 1, 90, FOCUS_DEFAULTS.long),
             every: clampInt(fcfg.every, 2, 8, FOCUS_DEFAULTS.every),
-            sound: fcfg.sound !== false
+            sound: fcfg.sound !== false,
+            notify: fcfg.notify === true,
+            autoBreak: fcfg.autoBreak !== false,
+            autoFocus: fcfg.autoFocus === true
           };
           return {
             version: VERSION,
@@ -1629,6 +1650,71 @@
             ? state.habits.find(h => h.id === focusTimer.habitId)
             : null;
         }
+        // ---------- Focus notifications ----------
+        // Desktop notifications are opt-in, requested only from a user action,
+        // and fall back to the chime/toast when unavailable. They can only fire
+        // while Evrida is open in a tab or an installed app.
+        function notificationStatus() {
+          if (typeof Notification === 'undefined') return 'unsupported';
+          return Notification.permission || 'default';
+        }
+        function notificationReady() {
+          return notificationStatus() === 'granted';
+        }
+        function focusNotificationsWanted() {
+          return (state.settings.focus || FOCUS_DEFAULTS).notify === true;
+        }
+        async function ensureNotificationPermission() {
+          if (typeof Notification === 'undefined') return false;
+          if (Notification.permission === 'granted') return true;
+          if (Notification.permission === 'denied') return false;
+          try {
+            return (await Notification.requestPermission()) === 'granted';
+          } catch (_) {
+            return false;
+          }
+        }
+        function showPageNotification(title, options) {
+          try {
+            new Notification(title, options);
+          } catch (_) {}
+        }
+        function sendFocusNotification(title, body, force = false) {
+          if (!force && !focusNotificationsWanted()) return;
+          if (!notificationReady()) return;
+          const options = {
+            body,
+            tag: 'evrida-focus',
+            icon: 'icons/icon-192.png',
+            badge: 'icons/icon-192.png',
+            renotify: true
+          };
+          // A service worker notification also works in an installed iOS PWA,
+          // where the page-level Notification constructor is unavailable.
+          try {
+            const sw =
+              typeof navigator !== 'undefined' ? navigator.serviceWorker : null;
+            if (sw && typeof sw.getRegistration === 'function') {
+              sw.getRegistration()
+                .then(reg =>
+                  reg
+                    ? reg.showNotification(title, options)
+                    : showPageNotification(title, options)
+                )
+                .catch(() => showPageNotification(title, options));
+              return;
+            }
+          } catch (_) {}
+          showPageNotification(title, options);
+        }
+        function focusShouldNotify() {
+          if (!notificationReady()) return false;
+          if (typeof document === 'undefined') return false;
+          return (
+            document.hidden === true ||
+            (typeof document.hasFocus === 'function' && !document.hasFocus())
+          );
+        }
         function stopFocusTicker() {
           if (focusTicker) clearInterval(focusTicker);
           focusTicker = null;
@@ -1643,7 +1729,8 @@
                 running: focusTimer.running,
                 endsAt: focusTimer.endsAt,
                 remaining: focusTimer.remaining,
-                cycle: focusTimer.cycle
+                cycle: focusTimer.cycle,
+                active: focusTimer.active
               })
             );
           } catch (_) {}
@@ -1654,6 +1741,7 @@
           focusTimer.running = false;
           focusTimer.endsAt = 0;
           focusTimer.remaining = focusModeSeconds(focusTimer.mode);
+          focusTimer.active = false;
           stopFocusTicker();
           persistTimer();
           document.title = baseTitle;
@@ -1669,6 +1757,39 @@
           document.title = focusTimer.running
             ? `${clockText(left)} · ${focusModeLabel()} — Evrida`
             : baseTitle;
+          renderMiniTimer();
+        }
+        // The mini timer lives outside #main, so it stays visible on every
+        // page while a session is running or paused. It is the dependable way
+        // to keep an eye on the clock without a stream of notifications.
+        function renderMiniTimer() {
+          const el = $('#miniTimer');
+          if (!el) return;
+          const show = focusTimer.active && activePage !== 'focus';
+          el.hidden = !show;
+          if (!show) return;
+          const left = focusRemainingSeconds();
+          const total = focusModeSeconds();
+          const habit = focusHabit();
+          const mode = $('#miniMode');
+          if (mode) mode.textContent = focusModeLabel();
+          const clock = $('#miniClock');
+          if (clock) clock.textContent = clockText(left);
+          const name = $('#miniHabit');
+          if (name) name.textContent = habit ? habit.name : 'Unassigned time';
+          const toggle = $('#miniToggle');
+          if (toggle)
+            toggle.textContent = focusTimer.running
+              ? 'Pause'
+              : left > 0 && left < total
+                ? 'Resume'
+                : 'Start';
+          const open = $('#miniOpen');
+          if (open)
+            open.setAttribute(
+              'aria-label',
+              `${focusModeLabel()} timer, ${clockText(left)} remaining${habit ? ', ' + habit.name : ''}. Open Focus.`
+            );
         }
         function startFocusTimer() {
           let left = focusRemainingSeconds();
@@ -1679,6 +1800,7 @@
           focusTimer.running = true;
           focusTimer.remaining = left;
           focusTimer.endsAt = Date.now() + left * 1000;
+          focusTimer.active = true;
           persistTimer();
           stopFocusTicker();
           focusTicker = setInterval(tickFocus, 1000);
@@ -1698,6 +1820,7 @@
           focusTimer.running = false;
           focusTimer.endsAt = 0;
           focusTimer.remaining = focusModeSeconds();
+          focusTimer.active = false;
           stopFocusTicker();
           persistTimer();
           document.title = baseTitle;
@@ -1772,13 +1895,13 @@
         }
         function completeFocusSession(opts = {}) {
           const wasFocus = focusTimer.mode === 'focus';
+          const cfg = state.settings.focus || FOCUS_DEFAULTS;
           const minutes = Math.max(
             1,
             Math.round(focusModeSeconds('focus') / 60)
           );
           if (wasFocus) {
             creditFocusSession(minutes);
-            const cfg = state.settings.focus || FOCUS_DEFAULTS;
             const every = Math.max(2, Number(cfg.every) || FOCUS_DEFAULTS.every);
             focusTimer.cycle = (focusTimer.cycle + 1) % every;
             focusTimer.mode = focusTimer.cycle === 0 ? 'long' : 'short';
@@ -1788,19 +1911,37 @@
           focusTimer.running = false;
           focusTimer.endsAt = 0;
           focusTimer.remaining = focusModeSeconds();
+          focusTimer.active = true;
           stopFocusTicker();
+          let autoStarted = false;
+          if (!opts.silent) {
+            const auto = wasFocus
+              ? cfg.autoBreak !== false
+              : cfg.autoFocus === true;
+            if (auto) {
+              focusTimer.running = true;
+              focusTimer.endsAt = Date.now() + focusTimer.remaining * 1000;
+              focusTicker = setInterval(tickFocus, 1000);
+              autoStarted = true;
+            }
+          }
           persistTimer();
-          document.title = baseTitle;
+          document.title = focusTimer.running
+            ? `${clockText(focusTimer.remaining)} · ${focusModeLabel()} — Evrida`
+            : baseTitle;
           if (!opts.silent) chime();
           render();
           if (!opts.silent) {
             const habit = focusHabit();
-            notify(
-              wasFocus
-                ? `${formatMinutes(minutes)} logged${habit ? ' to ' + habit.name : ''}. Time for a ${focusTimer.mode === 'long' ? 'long ' : 'short '}break.`
-                : 'Break over. Ready when you are.',
-              false
-            );
+            const message = wasFocus
+              ? `${formatMinutes(minutes)} logged${habit ? ' to ' + habit.name : ''}. ${focusTimer.mode === 'long' ? 'Long' : 'Short'} break ${autoStarted ? 'started' : 'ready'}.`
+              : `Break over.${autoStarted ? ' Next focus started.' : ' Ready when you are.'}`;
+            notify(message, false);
+            if (focusShouldNotify())
+              sendFocusNotification(
+                wasFocus ? 'Focus complete' : 'Break over',
+                message
+              );
           }
         }
         function restoreTimer() {
@@ -1835,6 +1976,13 @@
           const endsAt = Number(saved.endsAt);
           focusTimer.running = saved.running === true && endsAt > 0;
           focusTimer.endsAt = focusTimer.running ? endsAt : 0;
+          const hasActive = Object.prototype.hasOwnProperty.call(saved, 'active');
+          focusTimer.active =
+            focusTimer.running ||
+            (hasActive
+              ? saved.active === true
+              : focusTimer.remaining < focusModeSeconds() ||
+                focusTimer.mode !== 'focus');
           if (focusTimer.running) {
             if (focusTimer.endsAt <= Date.now()) {
               // Completed while the tab was closed or asleep: credit once.
@@ -1986,9 +2134,18 @@
             html += `<form id="manualLogForm" class="manual-log"><div class="two"><div class="field"><label for="manualHabit">Habit</label><select id="manualHabit">${timeHabits.map(h => `<option value="${esc(h.id)}">${esc(h.icon)} ${esc(h.name)}</option>`).join('')}</select></div><div class="field"><label for="manualDate">Date</label><input id="manualDate" type="date" max="${today()}" value="${today()}"></div></div><div class="two"><div class="field"><label for="manualMinutes">Minutes</label><input id="manualMinutes" type="number" min="1" max="1440" step="1" value="30" required></div><div class="field"><label for="manualNote">Note (optional)</label><input id="manualNote" type="text" maxlength="200"></div></div><div class="card-actions"><span class="grow"></span><button class="btn primary" type="submit">Log time</button></div></form>`;
           }
           html += `</div>`;
-          html += `<div class="panel"><div class="habit-top"><h3>Timer settings</h3><span class="grow"></span><button type="button" class="btn small" data-action="toggle-focus-settings" aria-expanded="${focusCfgOpen}">${focusCfgOpen ? 'Hide' : 'Edit'}</button></div>`;
+          html += `<div class="panel"><div class="habit-top"><h3>Timer settings</h3><span class="grow"></span><button type="button" class="btn small" data-action="toggle-focus-settings" aria-expanded="${focusCfgOpen}">${focusCfgOpen ? 'Hide' : 'Edit'}</button></div><p class="small-text">${cfg.focus} min focus · ${cfg.short} min short break · ${cfg.long} min long break · long break every ${cfg.every} focus blocks.</p><div class="focus-presets" role="group" aria-label="Timer presets">${FOCUS_PRESETS.map(p => `<button type="button" class="btn small" data-action="focus-preset" data-preset="${p.id}">${p.name} · ${p.focus}/${p.short}/${p.long}</button>`).join('')}</div>`;
           if (focusCfgOpen) {
-            html += `<form id="focusCfgForm"><div class="two"><div class="field"><label for="focusLen">Focus length (minutes)</label><input id="focusLen" type="number" min="1" max="180" value="${cfg.focus}" required></div><div class="field"><label for="shortLen">Short break (minutes)</label><input id="shortLen" type="number" min="1" max="60" value="${cfg.short}" required></div></div><div class="two"><div class="field"><label for="longLen">Long break (minutes)</label><input id="longLen" type="number" min="1" max="90" value="${cfg.long}" required></div><div class="field"><label for="longEvery">Long break every</label><input id="longEvery" type="number" min="2" max="8" value="${cfg.every}" required></div></div><label class="check-row"><input type="checkbox" id="focusSound" ${cfg.sound !== false ? 'checked' : ''}> Play a soft chime when a block ends</label><div class="card-actions"><span class="grow"></span><button class="btn primary" type="submit">Save settings</button></div></form>`;
+            const nStatus = notificationStatus();
+            const nNote =
+              nStatus === 'granted'
+                ? 'Desktop notifications are allowed in this browser.'
+                : nStatus === 'denied'
+                  ? 'Notifications are blocked for this site. Enable them in your browser settings.'
+                  : nStatus === 'unsupported'
+                    ? 'This browser does not support notifications here.'
+                    : 'You will be asked for permission when you enable this.';
+            html += `<form id="focusCfgForm"><div class="two"><div class="field"><label for="focusLen">Focus length (minutes)</label><input id="focusLen" type="number" min="1" max="180" value="${cfg.focus}" required></div><div class="field"><label for="shortLen">Short break (minutes)</label><input id="shortLen" type="number" min="1" max="60" value="${cfg.short}" required></div></div><div class="two"><div class="field"><label for="longLen">Long break (minutes)</label><input id="longLen" type="number" min="1" max="90" value="${cfg.long}" required></div><div class="field"><label for="longEvery">Long break every</label><input id="longEvery" type="number" min="2" max="8" value="${cfg.every}" required></div></div><label class="check-row"><input type="checkbox" id="focusAutoBreak" ${cfg.autoBreak !== false ? 'checked' : ''}> Start breaks automatically</label><label class="check-row"><input type="checkbox" id="focusAutoFocus" ${cfg.autoFocus === true ? 'checked' : ''}> Start the next focus automatically</label><label class="check-row"><input type="checkbox" id="focusSound" ${cfg.sound !== false ? 'checked' : ''}> Play a soft chime when a block ends</label><label class="check-row"><input type="checkbox" id="focusNotify" ${cfg.notify === true ? 'checked' : ''}> Desktop notification when a block ends in the background</label><p class="small-text muted" id="focusNotifyStatus">${nNote}</p><p class="small-text muted">Notifications appear only while Evrida is open in a tab or installed app. On iPhone, add Evrida to your Home Screen first.</p><div class="card-actions"><button type="button" class="btn small" data-action="test-notification">Send test notification</button><span class="grow"></span><button class="btn primary" type="submit">Save settings</button></div></form>`;
           }
           html += `</div>`;
           return html;
@@ -2056,12 +2213,15 @@
             };
           const cfgForm = $('#focusCfgForm');
           if (cfgForm)
-            cfgForm.onsubmit = e => {
+            cfgForm.onsubmit = async e => {
               e.preventDefault();
               const clamp = (v, lo, hi, d) => {
                 const n = Math.round(Number(v));
                 return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d;
               };
+              const requestedNotify = $('#focusNotify').checked;
+              let notifyOn = requestedNotify;
+              if (notifyOn) notifyOn = await ensureNotificationPermission();
               state.settings.focus = {
                 focus: clamp($('#focusLen').value, 1, 180, FOCUS_DEFAULTS.focus),
                 short: clamp($('#shortLen').value, 1, 60, FOCUS_DEFAULTS.short),
@@ -2072,14 +2232,24 @@
                   8,
                   FOCUS_DEFAULTS.every
                 ),
-                sound: $('#focusSound').checked
+                sound: $('#focusSound').checked,
+                notify: notifyOn,
+                autoBreak: $('#focusAutoBreak').checked,
+                autoFocus: $('#focusAutoFocus').checked
               };
-              if (!focusTimer.running)
+              if (!focusTimer.running) {
                 focusTimer.remaining = focusModeSeconds();
+                focusTimer.active = false;
+              }
               persistTimer();
               save();
               render();
-              notify('Timer settings saved.', false);
+              notify(
+                requestedNotify && !notifyOn
+                  ? 'Timer settings saved. Notifications could not be enabled; the chime and in-app message still work.'
+                  : 'Timer settings saved.',
+                false
+              );
             };
         }
         function renderSettings() {
@@ -2142,6 +2312,7 @@
         function render() {
           applyTheme();
           renderNav();
+          renderMiniTimer();
           const root = $('#main');
           // Journal is now accessed via Settings; History is now an Insights tab.
           // Redirect legacy deep links to their new homes.
@@ -2866,6 +3037,48 @@
             render();
             return;
           }
+          if (action === 'focus-preset') {
+            if (focusTimer.running) {
+              notify('Pause the timer before changing presets.', false);
+              return;
+            }
+            const preset = FOCUS_PRESETS.find(p => p.id === b.dataset.preset);
+            if (preset) {
+              state.settings.focus = {
+                ...state.settings.focus,
+                focus: preset.focus,
+                short: preset.short,
+                long: preset.long,
+                every: preset.every
+              };
+              focusTimer.remaining = focusModeSeconds();
+              focusTimer.active = false;
+              persistTimer();
+              save();
+              render();
+              notify(`${preset.name} preset applied.`, false);
+            }
+            return;
+          }
+          if (action === 'test-notification') {
+            const ok = await ensureNotificationPermission();
+            if (!ok) {
+              notify(
+                notificationStatus() === 'denied'
+                  ? 'Notifications are blocked for this site. Enable them in your browser settings.'
+                  : 'Notifications are not available in this browser here.',
+                false
+              );
+              return;
+            }
+            sendFocusNotification(
+              'Evrida test notification',
+              'Focus notifications are working. You will see these when a block ends while Evrida is in the background.',
+              true
+            );
+            notify('Test notification sent.', false);
+            return;
+          }
           if (action === 'open-journal-view') {
             activePage = 'settings';
             settingsView = 'journal';
@@ -2892,6 +3105,18 @@
             return;
           }
         }
+        const miniOpen = $('#miniOpen');
+        if (miniOpen)
+          miniOpen.onclick = () => {
+            activePage = 'focus';
+            render();
+          };
+        const miniToggle = $('#miniToggle');
+        if (miniToggle)
+          miniToggle.onclick = () => {
+            if (focusTimer.running) pauseFocusTimer();
+            else startFocusTimer();
+          };
         $('#headerAdd').onclick = () => openHabit();
         $('#headerExport').onclick = exportData;
         $('#headerTheme').onclick = () => {

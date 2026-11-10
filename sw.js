@@ -9,7 +9,7 @@
  * promptly, with the cache as the offline fallback. Static assets are
  * cache-first, refreshed in the background.
  */
-const CACHE = 'evrida-shell-v2';
+const CACHE = 'evrida-shell-v3';
 const SHELL = [
   './',
   './index.html',
@@ -42,6 +42,20 @@ self.addEventListener('activate', (event) => {
         Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))
       )
       .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windows) => {
+        for (const client of windows) {
+          if ('focus' in client) return client.focus();
+        }
+        return self.clients.openWindow('./');
+      })
   );
 });
 

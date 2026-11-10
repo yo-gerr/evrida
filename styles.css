@@ -2504,3 +2504,102 @@
           transition: none;
         }
       }
+
+      /* ---------- Mini timer (visible while away from Focus) ---------- */
+
+      .mini-timer {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+        margin: 0 0 var(--sp-5);
+        padding: 5px 8px 5px 12px;
+        border: var(--bw) solid var(--line);
+        border-radius: var(--r-pill);
+        background: var(--card);
+        box-shadow: var(--shadow-1);
+      }
+
+      .mini-timer[hidden] {
+        display: none;
+      }
+
+      .mini-open {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 4px;
+        border: 0;
+        border-radius: var(--r-pill);
+        background: transparent;
+        color: var(--ink);
+        font: inherit;
+        text-align: left;
+      }
+
+      .mini-open:hover {
+        color: var(--accent);
+      }
+
+      .mini-open:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .mini-dot {
+        flex: none;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 0 3px
+          color-mix(in srgb, var(--accent) 18%, transparent);
+      }
+
+      .mini-mode {
+        flex: none;
+        color: var(--muted);
+        font-size: 11.5px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .mini-clock {
+        flex: none;
+        font-size: 15px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .mini-habit {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .focus-presets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: var(--sp-3) 0 var(--sp-2);
+      }
+
+      .focus-presets .btn {
+        font-variant-numeric: tabular-nums;
+      }
+
+      @media (max-width: 560px) {
+        .mini-habit {
+          display: none;
+        }
+
+        .mini-timer {
+          margin-bottom: var(--sp-4);
+        }
+      }

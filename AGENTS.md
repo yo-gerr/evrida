@@ -47,7 +47,7 @@ Do not overwrite user changes or replace the application wholesale when a focuse
 The current persistence constants are:
 
 - localStorage key: `streakgrid`
-- schema version: `10`
+- schema version: `11`
 
 The key name is a deliberate compatibility choice from the app's previous Streakgrid branding. **Do not rename the key to `evrida` just to match the new brand.** That could make existing local data appear lost. If a storage-key migration is explicitly requested, read the old key, validate and migrate its contents, save the new state safely, and preserve a recovery path.
 
@@ -65,9 +65,9 @@ Current root state includes:
 - `settings.theme`
 - `settings.focus`
 
-Exports add `app: "Evrida"` and `exportedAt` metadata. Current normalization uses version 10 and validates the principal data fields.
+Exports add `app: "Evrida"` and `exportedAt` metadata. Current normalization uses version 11 and validates the principal data fields.
 
-Time habits add an optional `habit.unit: 'minutes'`; count habits omit it. A time habit's `goal` is minutes (1–600) and its `done` values are minutes (0–999), while count habits keep `goal` 1–99 and rep counts. Both share the same `done` slot, so streak, heatmap, insights, and companion math treat them identically. Sessions are `{id, habitId, date, minutes, at, kind: 'focus'|'manual', note}` and are capped at the most recent 3,000. `settings.focus` is `{focus, short, long, every, sound}` with ranges 1–180, 1–60, 1–90, 2–8, and boolean. The resumable timer also uses a separate `streakgrid-timer` key that is not part of the backup schema.
+Time habits add an optional `habit.unit: 'minutes'`; count habits omit it. A time habit's `goal` is minutes (1–600) and its `done` values are minutes (0–999), while count habits keep `goal` 1–99 and rep counts. Both share the same `done` slot, so streak, heatmap, insights, and companion math treat them identically. Sessions are `{id, habitId, date, minutes, at, kind: 'focus'|'manual', note}` and are capped at the most recent 3,000. `settings.focus` is `{focus, short, long, every, sound, notify, autoBreak, autoFocus}` with ranges 1-180, 1-60, 1-90, 2-8, and booleans. Defaults are 25 / 5 / 15 / 4 / true / false / true / false; `autoBreak` intentionally defaults on, while `autoFocus` defaults off so unattended time is not credited. The resumable timer also uses a separate `streakgrid-timer` key that is not part of the backup schema; it stores the timer mode, habit, timing, and mini-timer visibility.
 
 Rules:
 
@@ -215,7 +215,7 @@ The current app contains these areas:
 - **Today:** current-day habit progress, daily quote, daily intentions.
 - **Habits:** create, edit, delete, schedule, target, category, emoji, color. Habits are grouped into alphabetical category sections; with `CATEGORY_COLLAPSE_THRESHOLD` (8) or more habits each section heading becomes a collapsible disclosure that shows a done-today summary while collapsed.
 - **Insights:** Trends, History, and Habitat tabs. Trends are time-period/category summaries and habit comparisons; History is historical completion and date inspection; Habitat is the companion view.
-- **Focus:** Pomodoro timer for time habits (Track by → Time), session logging, manual time entry, and a Steam-style time library. Only time habits appear in the timer picker and time library. A completed focus block credits the configured focus minutes to the selected habit's `done[today]`, records a session, and awards companion XP if it reaches the goal; breaking a block early logs nothing. The timer resumes from `streakgrid-timer` after a reload and credits a block that finished while away exactly once. Break early-stop and manual-entry rules are documented in the README.
+- **Focus:** Pomodoro timer for time habits (Track by → Time), session logging, manual time entry, and a Steam-style time library. Only time habits appear in the timer picker and time library. A completed focus block credits the configured focus minutes to the selected habit's `done[today]`, records a session, and awards companion XP if it reaches the goal; breaking a block early logs nothing. The timer resumes from `streakgrid-timer` after a reload and credits a block that finished while away exactly once. Presets, auto-start settings, an always-visible mini timer, and opt-in on-device desktop notifications are part of the Focus experience; notifications must be requested only from a user action and must degrade to the chime and toast. Break early-stop and manual-entry rules are documented in the README.
 - **Journal:** dated reflections, mood, search, saved quote access, habit snapshot. Accessed from Settings.
 - **Settings:** system/light/dark theme, export/import, local-data deletion, privacy notes, and Journal access.
 
@@ -231,7 +231,7 @@ Daily intentions are separate from habits. Journal entries are optional and must
 
 - Exported filename currently follows `evrida-backup-YYYY-MM-DD.json`.
 - Export includes `app: "Evrida"` and an ISO timestamp in `exportedAt`.
-- The app's current root schema version is 10.
+- The app's current root schema version is 11.
 - Import must validate the selected JSON, normalize it, request confirmation, and create a safety export before replacing current state.
 - Invalid JSON and invalid data must produce a useful message without corrupting current state.
 - Keep file-size limits and array/field limits intentional and documented.

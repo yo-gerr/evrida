@@ -56,6 +56,20 @@
         ><button class="btn primary" id="headerAdd">＋ New habit</button>
       </header>
       <nav class="nav" id="topNav" aria-label="Main navigation"></nav>
+      <div class="mini-timer" id="miniTimer" hidden>
+        <button
+          type="button"
+          class="mini-open"
+          id="miniOpen"
+          aria-label="Open Focus timer"
+        >
+          <span class="mini-dot" aria-hidden="true"></span>
+          <span class="mini-mode" id="miniMode">Focus</span>
+          <span class="mini-clock" id="miniClock">25:00</span>
+          <span class="mini-habit" id="miniHabit"></span>
+        </button>
+        <button type="button" class="btn small" id="miniToggle">Start</button>
+      </div>
       <main id="main" tabindex="-1"></main>
     </div>
     <nav class="bottom-nav" id="bottomNav" aria-label="Mobile navigation"></nav>

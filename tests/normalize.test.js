@@ -37,7 +37,7 @@ test('normalize stamps root version and defaults missing sections', () => {
   assert.deepEqual(s.journal, {});
   assert.deepEqual(s.savedQuotes, []);
   assert.deepEqual(s.tasks, {});
-  assert.deepEqual(s.settings, { theme: 'system', focus: { focus: 25, short: 5, long: 15, every: 4, sound: true } });
+  assert.deepEqual(s.settings, { theme: 'system', focus: { focus: 25, short: 5, long: 15, every: 4, sound: true, notify: false, autoBreak: true, autoFocus: false } });
 });
 
 test('normalize ignores unknown root fields such as export metadata', () => {
